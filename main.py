@@ -1,16 +1,12 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
-
+from app.agent import DesktopAssistantAgent
 
 def main():
     load_dotenv()
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY is missing in your .env file")
-
-    client = OpenAI(api_key=api_key)
+    
+    agent = DesktopAssistantAgent()
 
     print("Desktop Assistant Agent is online. Type 'exit' to quit.\n")
 
@@ -24,22 +20,8 @@ def main():
             print("Assistant: Goodbye.")
             break
 
-        response = client.responses.create(
-            model="gpt-4.1-mini",
-            input=[
-                {
-                    "role": "system",
-                    "content": "You are a concise desktop assistant."
-                },
-                {
-                    "role": "user",
-                    "content": user_input
-                }
-            ]
-        )
-
-        print(f"Assistant: {response.output_text}")
-
+        result = agent.handle_user_message(user_input)
+        print(f"Assistant: {result}")
 
 if __name__ == "__main__":
     main()

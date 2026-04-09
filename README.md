@@ -22,6 +22,20 @@ The goal is to better understand how modern AI agents operate beyond simple chat
 
 ## Architecture
 
+desktop-assistant-agent/
+├── app/
+│   ├── __init__.py
+│   ├── agent.py
+│   ├── logger.py
+│   ├── memory.py
+│   ├── router.py
+│   └── schemas.py
+├── data/
+├── .env.example
+├── .gitignore
+├── main.py
+├── README.md
+└── requirements.txt
 
 
 ## Example Use Cases
