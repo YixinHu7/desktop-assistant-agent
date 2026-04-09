@@ -26,10 +26,15 @@ desktop-assistant-agent/
 ├── app/
 │   ├── __init__.py
 │   ├── agent.py
+│   ├── executor.py
 │   ├── logger.py
 │   ├── memory.py
 │   ├── router.py
 │   └── schemas.py
+│   └── tools/
+│       ├── __init__.py
+│       ├── registry.py
+│       └── system_tools.py
 ├── data/
 ├── .env.example
 ├── .gitignore
