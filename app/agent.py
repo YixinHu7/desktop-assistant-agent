@@ -17,7 +17,7 @@ class DesktopAssistantAgent:
         self.client = OpenAI(api_key=api_key)
         self.memory = MemoryStore()
         self.router = Router(self.client)
-        self.executor = ToolExecutor()
+        self.executor = ToolExecutor(self.memory)
         
         self.system_prompt = (
             "You are a concise desktop assistant agent. "

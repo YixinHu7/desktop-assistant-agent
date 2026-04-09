@@ -1,5 +1,6 @@
 import platform
 import subprocess
+import os
 
 def create_note(title: str, content: str):
     import os
@@ -14,6 +15,8 @@ def create_note(title: str, content: str):
     
     with open(path, "w", encoding="utf-8") as f:
         f.write(f"# {title}\n\n{content}\n")
+    
+    return {"ok": True, "path": path}
 
 def open_app(app_name: str):
     current_os = platform.system()
@@ -29,3 +32,26 @@ def open_app(app_name: str):
         return {"ok": False, "error": result.stderr.strip()}
 
     return {"ok": False, "error": "Unsupported OS"}
+
+def list_files(path: str):
+    try:
+        files = os.listdir(path)
+        return {"ok": True, "files": files}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+    
+def read_file(path: str):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return {"ok": True, "content": content[:4000]}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+def save_memory_fact(memory_store, key: str, value: str):
+    from app.memory import MemoryStore
+    
+    memory_store.data["facts"][key] = value
+    memory_store.save()
+    
+    return {"ok": True, "saved": {key: value}}
