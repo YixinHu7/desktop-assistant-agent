@@ -21,7 +21,7 @@ The goal is to better understand how modern AI agents operate beyond simple chat
 - 📊 Trace logging for debugging agent decisions
 
 ## Architecture
-
+```
 desktop-assistant-agent/
 ├── app/
 │   ├── __init__.py
@@ -41,7 +41,7 @@ desktop-assistant-agent/
 ├── main.py
 ├── README.md
 └── requirements.txt
-
+```
 
 ## Example Use Cases
 
