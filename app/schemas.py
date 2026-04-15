@@ -19,6 +19,6 @@ class ExecutionStepResult(BaseModel):
     status: Literal["pending", "completed", "failed"]
     note: str = ""
 
-class ExecutionSummary(BaseModel):
+class ExecutionReview(BaseModel):
     completed_steps: List[ExecutionStepResult] = Field(default_factory=list)
-    remaining_steps: List[str] = Field(default_factory=list)
+    remaining_steps: List[ExecutionStepResult] = Field(default_factory=list)
