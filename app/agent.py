@@ -8,6 +8,7 @@ from app.logger import log_event
 from app.executor import ToolExecutor
 from app.tools.registry import TOOLS
 from app.planner import Planner
+from app.reviewer import ExecutionReviewer
 
 class DesktopAssistantAgent:
     def __init__(self):
@@ -20,6 +21,7 @@ class DesktopAssistantAgent:
         self.router = Router(self.client)
         self.executor = ToolExecutor(self.memory)
         self.planner = Planner(self.client)
+        self.reviewer = ExecutionReviewer(self.client)
         
         self.system_prompt = (
             "You are a concise desktop assistant agent. "
@@ -46,10 +48,12 @@ class DesktopAssistantAgent:
         route = self.router.decide(user_input, memory_context)
         log_event("route_decision", route.model_dump())
         
+        plan_goal = user_input
         # If route decision is "Plan"
         plan_text = "No explicit plan created."
         if route.route == "plan":
             plan = self.planner.make_plan(user_input, memory_context)
+            plan_goal = plan.goal
             log_event("plan_created", plan.model_dump())
             
             formatted_steps = []
@@ -114,9 +118,23 @@ class DesktopAssistantAgent:
                 if getattr(item, "type", None) == "function_call"
             ]
             
+            # No more tools need to execute
             if not function_calls:
                 final_answer = response.output_text.strip() or "Done."
                 self.memory.add_history("assistant", final_answer)
+                
+                execution_review = None
+                
+                # If route is "plan", do review
+                if route.route == "plan":
+                    tool_results_text = json.dumps(tool_results_for_summary, ensure_ascii=False, indent=2)
+                    execution_review = self.reviewer.review_execution(
+                        goal=plan_goal,
+                        plan_text=plan_text,
+                        tool_results_text=tool_results_text
+                )
+
+                    log_event("step_review", execution_review.model_dump())
                 
                 log_event("execution_summary", {
                     "route": route.route,
