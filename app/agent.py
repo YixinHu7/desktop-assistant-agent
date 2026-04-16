@@ -9,6 +9,7 @@ from app.executor import ToolExecutor
 from app.tools.registry import TOOLS
 from app.planner import Planner
 from app.reviewer import ExecutionReviewer
+from app.replanner import Replanner
 
 class DesktopAssistantAgent:
     def __init__(self):
@@ -22,6 +23,7 @@ class DesktopAssistantAgent:
         self.executor = ToolExecutor(self.memory)
         self.planner = Planner(self.client)
         self.reviewer = ExecutionReviewer(self.client)
+        self.replanner = Replanner(self.client)
         
         self.system_prompt = (
             "You are a concise desktop assistant agent. "
@@ -136,11 +138,31 @@ class DesktopAssistantAgent:
 
                     log_event("step_review", execution_review.model_dump())
                 
+                # Replan if there are remaining steps
+                replan_decision = None
+                if route.route == "plan" and execution_review is not None:
+                    has_remaining = len(execution_review.remaining_steps) > 0
+
+                    if has_remaining:
+                        replan_decision = self.replanner.replan(
+                            user_input=user_input,
+                            original_goal=plan_goal,
+                            plan_text=plan_text,
+                            tool_results_text=json.dumps(tool_results_for_summary, ensure_ascii=False, indent=2),
+                            step_review_text=json.dumps(execution_review.model_dump(), ensure_ascii=False, indent=2),
+                            memory_context=memory_context,
+                        )
+
+                        log_event("replan_decision", replan_decision.model_dump())
+                
                 log_event("execution_summary", {
                     "route": route.route,
                     "plan": plan_text,
                     "used_tools": used_tools,
                     "tool_results_count": len(tool_results_for_summary),
+                    "has_step_review": execution_review is not None,
+                    "has_replan_decision": replan_decision is not None,
+                    "replan_triggered": replan_decision.should_replan if replan_decision else False,
                 })
                 
                 log_event("final_answer", {
@@ -148,6 +170,12 @@ class DesktopAssistantAgent:
                     "used_tools": used_tools
                 })
                 
+                if replan_decision is not None and not replan_decision.should_replan:
+                    final_answer += (
+                        "\n\nSome remaining plan steps were not completed with the current toolset. "
+                        f"Reason: {replan_decision.reason}"
+                    )
+                    
                 return final_answer
             
             tool_outputs = []
