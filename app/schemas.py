@@ -22,3 +22,9 @@ class ExecutionStepResult(BaseModel):
 class ExecutionReview(BaseModel):
     completed_steps: List[ExecutionStepResult] = Field(default_factory=list)
     remaining_steps: List[ExecutionStepResult] = Field(default_factory=list)
+
+class ReplanDecision(BaseModel):
+    should_replan: bool
+    reason: str
+    revised_goal: str
+    next_steps: List[PlanStep] = Field(default_factory=list)
