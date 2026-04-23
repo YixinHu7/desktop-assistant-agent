@@ -10,6 +10,7 @@ from app.tools.registry import TOOLS
 from app.planner import Planner
 from app.reviewer import ExecutionReviewer
 from app.replanner import Replanner
+from app.recovery import ToolRecoveryManager
 
 class DesktopAssistantAgent:
     def __init__(self):
@@ -24,6 +25,7 @@ class DesktopAssistantAgent:
         self.planner = Planner(self.client)
         self.reviewer = ExecutionReviewer(self.client)
         self.replanner = Replanner(self.client)
+        self.recovery = ToolRecoveryManager()
         
         self.system_prompt = (
             "You are a concise desktop assistant agent. "
@@ -128,11 +130,59 @@ class DesktopAssistantAgent:
                     "result": result
                 })
                 
+                final_tool_result = result
+                
+                # Try deterministic recovery if the tool failed
+                recovery_decision = self.recovery.maybe_recover(call.name, arguments, result)
+                
+                if recovery_decision["should_retry"]:
+                    retry_tool = recovery_decision["retry_tool"]
+                    retry_arguments = recovery_decision["retry_arguments"]
+                    
+                    log_event("tool_recovery_attempt", {
+                        "original_tool": call.name,
+                        "original_arguments": arguments,
+                        "original_result": result,
+                        "retry_tool": retry_tool,
+                        "retry_arguments": retry_arguments,
+                        "reason": recovery_decision["reason"],
+                    })
+                    
+                    retry_result = self.executor.execute(retry_tool, retry_arguments)
+                    
+                    tool_results_for_summary.append({
+                        "tool_name": retry_tool,
+                        "arguments": retry_arguments,
+                        "result": retry_result,
+                        "recovery_for": call.name,
+                    })
+                    
+                    log_event("tool_recovery_result", {
+                        "retry_tool": retry_tool,
+                        "retry_arguments": retry_arguments,
+                        "retry_result": retry_result,
+                    })
+                    
+                    final_tool_result = {
+                        "original_failure": {
+                            "tool_name": call.name,
+                            "arguments": arguments,
+                            "result": result,
+                        },
+                        "recovery_attempt": {
+                            "tool_name": retry_tool,
+                            "arguments": retry_arguments,
+                            "result": retry_result,
+                            "reason": recovery_decision["reason"],
+                        }
+                    }
+                    
                 tool_outputs.append({
                     "type": "function_call_output",
                     "call_id": call.call_id,
-                    "output": json.dumps(result, ensure_ascii=False)
+                    "output": json.dumps(final_tool_result, ensure_ascii=False)
                 })
+
             
             response = self.client.responses.create(
                 model="gpt-4.1-mini",
