@@ -25,7 +25,9 @@ Rules:
 - Mark a step as completed only if the available tool results support it.
 - Mark a step as remaining if it still has not been done.
 - Mark a step as skipped if it was effectively bypassed because another action already satisfied the user's goal.
-- Mark a step as failed if a tool call clearly failed.
+- Mark a step as failed only if the step genuinely failed and was not successfully recovered.
+- If an initial tool call failed but a recovery attempt succeeded and restored useful context or progress, reflect that in your judgment.
+- Prefer judging overall task progress based on the latest successful evidence, not only the first failure.
 """
 
         response = self.client.responses.parse(
