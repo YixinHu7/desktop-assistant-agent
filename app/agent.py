@@ -11,6 +11,7 @@ from app.planner import Planner
 from app.reviewer import ExecutionReviewer
 from app.replanner import Replanner
 from app.recovery import ToolRecoveryManager
+from app.memory_policy import MemoryPolicy
 
 class DesktopAssistantAgent:
     def __init__(self):
@@ -30,6 +31,7 @@ class DesktopAssistantAgent:
         self.reviewer = ExecutionReviewer(self.client)
         self.replanner = Replanner(self.client)
         self.recovery = ToolRecoveryManager()
+        self.memory_policy = MemoryPolicy(self.client)
         
         self.system_prompt = (
             "You are a concise desktop assistant agent. "
@@ -212,6 +214,24 @@ class DesktopAssistantAgent:
         self.memory.add_history("user", user_input)
         
         memory_context = self.memory.get_context_text()
+        
+        # Get memory decision
+        memory_decision = self.memory_policy.decide(user_input, memory_context)
+        log_event("memory_decision", memory_decision.model_dump())
+        
+        if memory_decision.action == "write" and memory_decision.key and memory_decision.value:
+            self.memory.data["facts"][memory_decision.key] = memory_decision.value
+            self.memory.save()
+
+            log_event("memory_write", {
+                "key": memory_decision.key,
+                "value": memory_decision.value,
+                "reason": memory_decision.reason,
+                "source": "memory_policy"
+            })
+            # Update memory context
+            memory_context = self.memory.get_context_text()
+        
         # Get route decision
         route = self.router.decide(user_input, memory_context)
         log_event("route_decision", route.model_dump())
