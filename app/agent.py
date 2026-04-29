@@ -10,6 +10,7 @@ from app.tools.registry import TOOLS
 from app.planner import Planner
 from app.reviewer import ExecutionReviewer
 from app.replanner import Replanner
+from app.recovery import ToolRecoveryManager
 
 class DesktopAssistantAgent:
     def __init__(self):
@@ -24,6 +25,7 @@ class DesktopAssistantAgent:
         self.planner = Planner(self.client)
         self.reviewer = ExecutionReviewer(self.client)
         self.replanner = Replanner(self.client)
+        self.recovery = ToolRecoveryManager()
         
         self.system_prompt = (
             "You are a concise desktop assistant agent. "
@@ -125,14 +127,66 @@ class DesktopAssistantAgent:
                 tool_results_for_summary.append({
                     "tool_name": call.name,
                     "arguments": arguments,
-                    "result": result
+                    "result": result,
+                    "kind": "primary",
+                    "recovered": False,
                 })
                 
+                final_tool_result = result
+                
+                # Try deterministic recovery if the tool failed
+                recovery_decision = self.recovery.maybe_recover(call.name, arguments, result)
+                
+                if recovery_decision["should_retry"]:
+                    retry_tool = recovery_decision["retry_tool"]
+                    retry_arguments = recovery_decision["retry_arguments"]
+                    
+                    log_event("tool_recovery_attempt", {
+                        "original_tool": call.name,
+                        "original_arguments": arguments,
+                        "original_result": result,
+                        "retry_tool": retry_tool,
+                        "retry_arguments": retry_arguments,
+                        "reason": recovery_decision["reason"],
+                    })
+                    
+                    retry_result = self.executor.execute(retry_tool, retry_arguments)
+                    
+                    tool_results_for_summary.append({
+                        "tool_name": retry_tool,
+                        "arguments": retry_arguments,
+                        "result": retry_result,
+                        "kind": "recovery",
+                        "recovery_for": call.name,
+                        "recovered": retry_result.get("ok", False),
+                    })
+                    
+                    log_event("tool_recovery_result", {
+                        "retry_tool": retry_tool,
+                        "retry_arguments": retry_arguments,
+                        "retry_result": retry_result,
+                    })
+                    
+                    final_tool_result = {
+                        "original_failure": {
+                            "tool_name": call.name,
+                            "arguments": arguments,
+                            "result": result,
+                        },
+                        "recovery_attempt": {
+                            "tool_name": retry_tool,
+                            "arguments": retry_arguments,
+                            "result": retry_result,
+                            "reason": recovery_decision["reason"],
+                        }
+                    }
+                    
                 tool_outputs.append({
                     "type": "function_call_output",
                     "call_id": call.call_id,
-                    "output": json.dumps(result, ensure_ascii=False)
+                    "output": json.dumps(final_tool_result, ensure_ascii=False)
                 })
+
             
             response = self.client.responses.create(
                 model="gpt-4.1-mini",
@@ -243,7 +297,19 @@ class DesktopAssistantAgent:
                 "\n\nI made the progress I could with the currently available tools, "
                 f"but some remaining steps are still pending. {replan_decision.reason}"
             )
-            
+        
+        recovery_attempted = any(item.get("kind") == "recovery" for item in tool_results_for_summary)
+        recovery_succeeded = any(
+            item.get("kind") == "recovery" and item.get("result", {}).get("ok", False)
+            for item in tool_results_for_summary
+        )
+        
+        if recovery_attempted and recovery_succeeded and "I could not" in final_answer:
+            final_answer += (
+                "\n\nA recovery step succeeded after the initial tool failure, "
+                "so the agent was able to regain useful context."
+            )
+
         log_event("execution_summary", {
             "route": route.route,
             "plan": plan_text,
@@ -252,7 +318,9 @@ class DesktopAssistantAgent:
             "has_step_review": execution_review is not None,
             "has_replan_decision": replan_decision is not None,
             "replan_triggered": replan_decision.should_replan if replan_decision else False,
-            "revised_plan_used": replan_decision.revised_goal if replan_decision and replan_decision.should_replan else None
+            "revised_plan_used": replan_decision.revised_goal if replan_decision and replan_decision.should_replan else None,
+            "recovery_attempted": recovery_attempted,
+            "recovery_succeeded": recovery_succeeded,
         })
             
         self.memory.add_history("assistant", final_answer)

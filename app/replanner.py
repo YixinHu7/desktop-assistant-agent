@@ -41,6 +41,8 @@ Decide whether the agent should replan.
 Rules:
 - Only replan if meaningful progress is still possible with the currently available tools.
 - If the remaining work cannot actually be completed with current tools, do not replan.
+- If an earlier tool call failed but a later recovery attempt succeeded, base your judgment on the recovered state.
+- Do not recommend replanning just because an early attempt failed, if the recovery results already restored usable context.
 - If replanning, produce a short revised goal and a concise list of next executable steps.
 - If not replanning, explain why clearly.
 """
