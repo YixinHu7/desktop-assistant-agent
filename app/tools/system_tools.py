@@ -49,7 +49,6 @@ def read_file(path: str):
         return {"ok": False, "error": str(e)}
 
 def save_memory_fact(memory_store, key: str, value: str):
-    from app.memory import MemoryStore
     
     memory_store.data["facts"][key] = value
     memory_store.save()

@@ -6,7 +6,7 @@ from app.memory import MemoryStore
 from app.router import Router
 from app.logger import log_event
 from app.executor import ToolExecutor
-from app.tools.registry import TOOLS
+from app.tools.registry import build_tool_definitions, get_tool_schemas
 from app.planner import Planner
 from app.reviewer import ExecutionReviewer
 from app.replanner import Replanner
@@ -21,7 +21,11 @@ class DesktopAssistantAgent:
         self.client = OpenAI(api_key=api_key)
         self.memory = MemoryStore()
         self.router = Router(self.client)
-        self.executor = ToolExecutor(self.memory)
+        
+        self.tool_definitions = build_tool_definitions(self.memory)
+        self.tools = get_tool_schemas(self.tool_definitions)
+        self.executor = ToolExecutor(self.tool_definitions)
+        
         self.planner = Planner(self.client)
         self.reviewer = ExecutionReviewer(self.client)
         self.replanner = Replanner(self.client)
@@ -89,7 +93,7 @@ class DesktopAssistantAgent:
         response = self.client.responses.create(
             model="gpt-4.1-mini",
             input=input_items,
-            tools=TOOLS,
+            tools=self.tools,
             parallel_tool_calls=False
         )
         
@@ -192,14 +196,14 @@ class DesktopAssistantAgent:
                 model="gpt-4.1-mini",
                 previous_response_id=response.id,
                 input=tool_outputs,
-                tools=TOOLS,
+                tools=self.tools,
                 parallel_tool_calls=False
             )     
     
     def _ask_for_approval(self, tool_name: str, arguments: dict) -> bool:
-        high_risk_tools = {"open_app"}
-        if tool_name not in high_risk_tools:
+        if not self.executor.requires_approval(tool_name):
             return True
+        
         print(f"\n[Approval Required] {tool_name} with args={arguments}")
         answer = input("Approve? (y/n): ").strip().lower()
         return answer == "y"
