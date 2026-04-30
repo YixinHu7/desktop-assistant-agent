@@ -12,6 +12,7 @@ from app.reviewer import ExecutionReviewer
 from app.replanner import Replanner
 from app.recovery import ToolRecoveryManager
 from app.memory_policy import MemoryPolicy
+from app.approval_policy import ApprovalPolicy
 
 class DesktopAssistantAgent:
     def __init__(self):
@@ -32,6 +33,7 @@ class DesktopAssistantAgent:
         self.replanner = Replanner(self.client)
         self.recovery = ToolRecoveryManager()
         self.memory_policy = MemoryPolicy(self.client)
+        self.approval_policy = ApprovalPolicy()
         
         self.system_prompt = (
             "You are a concise desktop assistant agent. "
@@ -203,10 +205,25 @@ class DesktopAssistantAgent:
             )     
     
     def _ask_for_approval(self, tool_name: str, arguments: dict) -> bool:
-        if not self.executor.requires_approval(tool_name):
+        decision = self.approval_policy.decide(tool_name, arguments)
+        
+        log_event("approval_decision", {
+            "tool_name": tool_name,
+            "arguments": arguments,
+            "required": decision.required,
+            "risk_level": decision.risk_level,
+            "reason": decision.reason,
+        })
+        
+        if not decision.required:
             return True
         
-        print(f"\n[Approval Required] {tool_name} with args={arguments}")
+        print(f"\n[Approval Required]")
+        print(f"Tool: {tool_name}")
+        print(f"Arguments: {arguments}")
+        print(f"Risk: {decision.risk_level}")
+        print(f"Reason: {decision.reason}")
+        
         answer = input("Approve? (y/n): ").strip().lower()
         return answer == "y"
     
