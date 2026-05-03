@@ -13,6 +13,7 @@ from app.replanner import Replanner
 from app.recovery import ToolRecoveryManager
 from app.memory_policy import MemoryPolicy
 from app.approval_policy import ApprovalPolicy
+from app.tool_use_policy import ToolUsePolicy
 
 class DesktopAssistantAgent:
     def __init__(self):
@@ -34,6 +35,7 @@ class DesktopAssistantAgent:
         self.recovery = ToolRecoveryManager()
         self.memory_policy = MemoryPolicy(self.client)
         self.approval_policy = ApprovalPolicy()
+        self.tool_use_policy = ToolUsePolicy(self.client)
         
         self.system_prompt = (
             "You are a concise desktop assistant agent. "
@@ -50,6 +52,7 @@ class DesktopAssistantAgent:
         memory_context: str,
         plan_text: str,
         recent_history:list,
+        tool_use_decision=None,
     ):
         execution_instruction = (
             "If tools are useful, you may use them to make progress on the user's request. "
@@ -88,16 +91,49 @@ class DesktopAssistantAgent:
             }
         ]
         
+        if tool_use_decision is not None:
+            input_items.append({
+                "role": "system",
+                "content": (
+                    "Tool-use policy:\n"
+                    f"- should_use_tools: {tool_use_decision.should_use_tools}\n"
+                    f"- likely_tools: {tool_use_decision.likely_tools}\n"
+                    f"- avoid_tools: {tool_use_decision.avoid_tools}\n"
+                    f"- requires_grounding: {tool_use_decision.requires_grounding}\n"
+                    f"- reason: {tool_use_decision.reason}\n\n"
+                    "Follow this policy when deciding whether to call tools. "
+                    "If should_use_tools is false, avoid tool calls unless absolutely necessary. "
+                    "If likely_tools are provided, prefer those tools when tool use is needed."
+                )
+            })
+        
+        if tool_use_decision is not None and tool_use_decision.requires_grounding:
+            input_items.append({
+                "role": "system",
+                "content": (
+                    "Grounding instruction: This task involves files, directories, repository structure, "
+                    "or uncertain local paths. Do not invent paths such as './project'. "
+                    "If no exact path has been confirmed, first call list_files with path='.'. "
+                    "Only call read_file after there is evidence that the file exists."
+                )
+            })
+        
         for msg in recent_history:
             input_items.append(msg)
         
         used_tools = []
         tool_results_for_summary = []
         
+        tools_for_this_turn = self.tools
+
+        # If tool use decision gives result as should not use tools
+        if tool_use_decision is not None and not tool_use_decision.should_use_tools:
+            tools_for_this_turn = []
+        
         response = self.client.responses.create(
             model="gpt-4.1-mini",
             input=input_items,
-            tools=self.tools,
+            tools=tools_for_this_turn,
             parallel_tool_calls=False
         )
         
@@ -200,7 +236,7 @@ class DesktopAssistantAgent:
                 model="gpt-4.1-mini",
                 previous_response_id=response.id,
                 input=tool_outputs,
-                tools=self.tools,
+                tools=tools_for_this_turn,
                 parallel_tool_calls=False
             )     
     
@@ -253,6 +289,15 @@ class DesktopAssistantAgent:
         route = self.router.decide(user_input, memory_context)
         log_event("route_decision", route.model_dump())
         
+        # Get tool use decision
+        tool_use_decision = self.tool_use_policy.decide(
+            user_input=user_input,
+            route=route.route,
+            memory_context=memory_context,
+        )
+
+        log_event("tool_use_decision", tool_use_decision.model_dump())
+        
         plan_goal = user_input
         # If route decision is "Plan"
         plan_text = "No explicit plan created."
@@ -275,6 +320,7 @@ class DesktopAssistantAgent:
             memory_context=memory_context,
             plan_text=plan_text,
             recent_history=recent_history,
+            tool_use_decision=tool_use_decision,
         )
         
         execution_review = None
@@ -322,6 +368,7 @@ class DesktopAssistantAgent:
                 memory_context=memory_context,
                 plan_text=revised_plan_text,
                 recent_history=self.memory.get_recent_history(),
+                tool_use_decision=tool_use_decision,
             )
             
             used_tools.extend(second_used_tools)
