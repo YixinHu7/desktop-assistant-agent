@@ -15,6 +15,7 @@ from app.memory_policy import MemoryPolicy
 from app.approval_policy import ApprovalPolicy
 from app.tool_use_policy import ToolUsePolicy
 from app.run_context import RunContext
+from app.metrics import compute_run_metrics
 
 class DesktopAssistantAgent:
     def __init__(self):
@@ -449,7 +450,11 @@ class DesktopAssistantAgent:
         })
         
         run.final_answer = final_answer
-        log_event("run_summary", run.to_summary())
+        run_summary = run.to_summary()
+        log_event("run_summary", run_summary)
+        
+        run_metrics = compute_run_metrics(run_summary)
+        log_event("run_metrics", run_metrics)
 
         return final_answer
         
