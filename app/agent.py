@@ -16,6 +16,7 @@ from app.approval_policy import ApprovalPolicy
 from app.tool_use_policy import ToolUsePolicy
 from app.run_context import RunContext
 from app.metrics import compute_run_metrics
+from app.config import config
 
 class DesktopAssistantAgent:
     def __init__(self):
@@ -134,7 +135,7 @@ class DesktopAssistantAgent:
             tools_for_this_turn = []
         
         response = self.client.responses.create(
-            model="gpt-4.1-mini",
+            model=config.model,
             input=input_items,
             tools=tools_for_this_turn,
             parallel_tool_calls=False
@@ -251,7 +252,7 @@ class DesktopAssistantAgent:
 
             
             response = self.client.responses.create(
-                model="gpt-4.1-mini",
+                model=config.model,
                 previous_response_id=response.id,
                 input=tool_outputs,
                 tools=tools_for_this_turn,

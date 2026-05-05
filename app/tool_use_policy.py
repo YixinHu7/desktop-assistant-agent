@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List
 from openai import OpenAI
+from app.config import config
 
 
 class ToolUseDecision(BaseModel):
@@ -50,7 +51,7 @@ User input:
 """
 
         response = self.client.responses.parse(
-            model="gpt-4.1-mini",
+            model=config.model,
             input=[
                 {"role": "system", "content": "Return a structured tool-use decision."},
                 {"role": "user", "content": prompt},

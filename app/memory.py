@@ -1,16 +1,17 @@
 import json
 import os
+from app.config import config
 
-MEMORY_PATH = "data/memory.json"
 
 class MemoryStore:
-    def __init__(self):
-        os.makedirs("data", exist_ok=True)
+    def __init__(self, memory_path: str = config.memory_path):
+        self.memory_path = memory_path
+        os.makedirs(os.path.dirname(self.memory_path), exist_ok=True)
         self.data = self._load()
     
     def _load(self):
-        if os.path.exists(MEMORY_PATH):
-            with open(MEMORY_PATH, "r", encoding="utf-8") as f:
+        if os.path.exists(self.memory_path):
+            with open(self.memory_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         return {
             "facts": {},
@@ -19,12 +20,12 @@ class MemoryStore:
         }
     
     def save(self):
-        with open(MEMORY_PATH, "w", encoding="utf-8") as f:
+        with open(self.memory_path, "w", encoding="utf-8") as f:
             json.dump(self.data, f, indent=2, ensure_ascii=False)
         
     def add_history(self, role: str, content: str):
         self.data["history"].append({"role": role, "content": content})
-        self.data["history"] = self.data["history"][-12:]
+        self.data["history"] = self.data["history"][-config.max_history_messages:]
         self.save()
     
     def get_recent_history(self):

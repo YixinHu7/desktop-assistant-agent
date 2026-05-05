@@ -1,5 +1,6 @@
 from openai import OpenAI
 from app.schemas import ExecutionReview
+from app.config import config
 
 
 class ExecutionReviewer:
@@ -31,7 +32,7 @@ Rules:
 """
 
         response = self.client.responses.parse(
-            model="gpt-4.1-mini",
+            model=config.model,
             input=[
                 {"role": "system", "content": "Return a structured execution review."},
                 {"role": "user", "content": prompt},

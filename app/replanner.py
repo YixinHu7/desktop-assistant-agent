@@ -1,5 +1,6 @@
 from openai import OpenAI
 from app.schemas import ReplanDecision
+from app.config import config
 
 
 class Replanner:
@@ -48,7 +49,7 @@ Rules:
 """
 
         response = self.client.responses.parse(
-            model="gpt-4.1-mini",
+            model=config.model,
             input=[
                 {"role": "system", "content": "Return a structured replanning decision."},
                 {"role": "user", "content": prompt},

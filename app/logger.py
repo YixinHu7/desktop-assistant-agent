@@ -1,11 +1,10 @@
 import json
 import os
 from datetime import datetime
-
-TRACE_PATH = "data/traces.jsonl"
+from app.config import config
 
 def log_event(event_type: str, payload: dict):
-    os.makedirs("data", exist_ok=True)
+    os.makedirs(os.path.dirname(config.trace_path), exist_ok=True)
 
     row = {
         "ts": datetime.utcnow().isoformat(),
@@ -13,5 +12,5 @@ def log_event(event_type: str, payload: dict):
         "payload": payload
     }
 
-    with open(TRACE_PATH, "a", encoding="utf-8") as f:
+    with open(config.trace_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
