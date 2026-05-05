@@ -1,5 +1,7 @@
 from openai import OpenAI
 from app.schemas import RouteDecision
+from app.config import config
+
 
 class Router:
     def __init__(self, client: OpenAI):
@@ -22,7 +24,7 @@ User input:
 """
 
         response = self.client.responses.parse(
-            model="gpt-4.1-mini",
+            model=config.model,
             input=[
                 {"role": "system", "content": "Return a routing decision."},
                 {"role": "user", "content": prompt}

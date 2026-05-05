@@ -6,31 +6,14 @@ from app.tools.system_tools import (
     read_file,
     save_memory_fact,
 )
+from app.config import config
+
 
 def build_tool_definitions(memory_store):
-    return {
-        "create_note": ToolDefinition(
-            name="create_note",
-            schema={
-                "type": "function",
-                "name": "create_note",
-                "description": "Create a markdown note on disk.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string"},
-                        "content": {"type": "string"},
-                    },
-                    "required": ["title", "content"],
-                    "additionalProperties": False,
-                },
-                "strict": True,
-            },
-            function=create_note,
-            requires_approval=False,
-            source="local",
-        ),
-        "list_files": ToolDefinition(
+    tools = {}
+    
+    if config.enable_file_tools:
+        tools["list_files"] = ToolDefinition(
             name="list_files",
             schema={
                 "type": "function",
@@ -49,8 +32,8 @@ def build_tool_definitions(memory_store):
             function=list_files,
             requires_approval=False,
             source="local",
-        ),
-        "read_file": ToolDefinition(
+        )
+        tools["read_file"] = ToolDefinition(
             name="read_file",
             schema={
                 "type": "function",
@@ -69,8 +52,32 @@ def build_tool_definitions(memory_store):
             function=read_file,
             requires_approval=False,
             source="local",
-        ),
-        "save_memory_fact": ToolDefinition(
+        )
+    
+    tools["create_note"] = ToolDefinition(
+        name="create_note",
+        schema={
+            "type": "function",
+            "name": "create_note",
+            "description": "Create a markdown note on disk.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "content": {"type": "string"},
+                },
+                "required": ["title", "content"],
+                "additionalProperties": False,
+            },
+            "strict": True,
+        },
+        function=create_note,
+        requires_approval=False,
+        source="local",
+    )
+    
+    if config.enable_memory_tools:
+        tools["save_memory_fact"] = ToolDefinition(
             name="save_memory_fact",
             schema={
                 "type": "function",
@@ -90,8 +97,10 @@ def build_tool_definitions(memory_store):
             function=lambda key, value: save_memory_fact(memory_store, key, value),
             requires_approval=False,
             source="local",
-        ),
-        "open_app": ToolDefinition(
+        )
+    
+    if config.enable_open_app:
+        tools["open_app"] = ToolDefinition(
             name="open_app",
             schema={
                 "type": "function",
@@ -110,8 +119,9 @@ def build_tool_definitions(memory_store):
             function=open_app,
             requires_approval=True,
             source="local",
-        ),
-    }
+        )
+        
+    return tools
     
 def get_tool_schemas(tool_definitions):
     return [tool.schema for tool in tool_definitions.values()]

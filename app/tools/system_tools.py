@@ -3,13 +3,15 @@ import subprocess
 import os
 
 from app.tools.results import tool_success, tool_error
+from app.config import config
+
 
 def create_note(title: str, content: str):
     import os
     from datetime import datetime
     
     try:
-        notes_dir = "data/notes"
+        notes_dir = config.notes_dir
         os.makedirs(notes_dir, exist_ok=True)
     
         safe_title = title.replace("/", "_").replace("\\", "_")
@@ -74,8 +76,8 @@ def read_file(path: str):
         return tool_success(
             data={
                 "path": path,
-                "content": content[:4000],
-                "truncated": len(content) > 4000
+                "content": content[:config.max_file_read_chars],
+                "truncated": len(content) > config.max_file_read_chars
             },
             metadata={"tool": "read_file"}
         )

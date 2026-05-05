@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
 from statistics import mean
+from app.config import config
 
 
-TRACE_PATH = Path("data/traces.jsonl")
+TRACE_PATH = Path(config.trace_path)
 
 
 def load_run_metrics(trace_path: Path):

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Literal, Optional
 from openai import OpenAI
+from app.config import config
 
 
 class MemoryDecision(BaseModel):
@@ -42,7 +43,7 @@ User input:
 """
 
         response = self.client.responses.parse(
-            model="gpt-4.1-mini",
+            model=config.model,
             input=[
                 {"role": "system", "content": "Return a memory decision."},
                 {"role": "user", "content": prompt},
