@@ -202,6 +202,34 @@ Example prompts:
 
     Remember that I prefer concise technical explanations.
 
+## Developer Commands
+
+Run the agent:
+
+    make run
+
+Generate a runtime metrics report:
+
+    make metrics
+
+Clean traces:
+
+    make clean-traces
+
+Clean generated notes:
+
+    make clean-notes
+
+Reset local runtime data:
+
+    make reset-data
+
+If `make` is not available, use:
+
+    python scripts/dev.py run
+    python scripts/dev.py metrics
+    python scripts/dev.py reset-data
+    
 ## Runtime Metrics
 
 The runtime logs each run into:
