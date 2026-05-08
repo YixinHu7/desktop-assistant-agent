@@ -22,5 +22,38 @@ class AppConfig:
     enable_file_tools: bool = os.getenv("ENABLE_FILE_TOOLS", "true").lower() == "true"
     enable_memory_tools: bool = os.getenv("ENABLE_MEMORY_TOOLS", "true").lower() == "true"
 
+    def tool_permissions(self):
+        return {
+            "list_files": {
+                "enabled": self.enable_file_tools,
+                "requires_approval": False,
+                "risk_level": "low",
+                "reason": "Listing local files is low risk in this local assistant context.",
+            },
+            "read_file": {
+                "enabled": self.enable_file_tools,
+                "requires_approval": False,
+                "risk_level": "low",
+                "reason": "Reading local project files is allowed in this local assistant context.",
+            },
+            "create_note": {
+                "enabled": True,
+                "requires_approval": False,
+                "risk_level": "low",
+                "reason": "Creating a markdown note is low risk and reversible.",
+            },
+            "save_memory_fact": {
+                "enabled": self.enable_memory_tools,
+                "requires_approval": False,
+                "risk_level": "low",
+                "reason": "Saving explicit user memory is allowed when requested.",
+            },
+            "open_app": {
+                "enabled": self.enable_open_app,
+                "requires_approval": True,
+                "risk_level": "medium",
+                "reason": "Opening desktop applications changes the user's local environment.",
+            },
+        }
 
 config = AppConfig()
