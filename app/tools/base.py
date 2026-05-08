@@ -8,4 +8,6 @@ class ToolDefinition:
     schema: Dict[str, Any]
     function: Callable[..., Dict[str, Any]]
     requires_approval: bool = False
+    risk_level: str = "low"
+    permission_reason: str = ""
     source: str = "local"

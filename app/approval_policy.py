@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Literal
+from app.config import config
 
 
 class ApprovalDecision(BaseModel):
@@ -10,36 +11,18 @@ class ApprovalDecision(BaseModel):
 
 class ApprovalPolicy:
     def decide(self, tool_name: str, arguments: dict) -> ApprovalDecision:
-        if tool_name == "open_app":
+        permissions = config.tool_permissions()
+        tool_policy = permissions.get(tool_name)
+
+        if tool_policy is None:
             return ApprovalDecision(
                 required=True,
-                risk_level="medium",
-                reason="Opening desktop applications changes the user's local environment."
-            )
-
-        if tool_name == "create_note":
-            return ApprovalDecision(
-                required=False,
-                risk_level="low",
-                reason="Creating a note is low risk and reversible."
-            )
-
-        if tool_name == "save_memory_fact":
-            return ApprovalDecision(
-                required=False,
-                risk_level="low",
-                reason="Saving explicit user memory is allowed when requested."
-            )
-
-        if tool_name in {"read_file", "list_files"}:
-            return ApprovalDecision(
-                required=False,
-                risk_level="low",
-                reason="Reading local project files is allowed in this local assistant context."
+                risk_level="high",
+                reason="Unknown tools require approval by default."
             )
 
         return ApprovalDecision(
-            required=True,
-            risk_level="high",
-            reason="Unknown tools require approval by default."
+            required=tool_policy["requires_approval"],
+            risk_level=tool_policy["risk_level"],
+            reason=tool_policy["reason"],
         )

@@ -11,8 +11,9 @@ from app.config import config
 
 def build_tool_definitions(memory_store):
     tools = {}
+    permissions = config.tool_permissions()
     
-    if config.enable_file_tools:
+    if permissions["list_files"]["enabled"]:
         tools["list_files"] = ToolDefinition(
             name="list_files",
             schema={
@@ -54,29 +55,30 @@ def build_tool_definitions(memory_store):
             source="local",
         )
     
-    tools["create_note"] = ToolDefinition(
-        name="create_note",
-        schema={
-            "type": "function",
-            "name": "create_note",
-            "description": "Create a markdown note on disk.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "content": {"type": "string"},
+    if permissions["create_note"]["enabled"]:
+        tools["create_note"] = ToolDefinition(
+            name="create_note",
+            schema={
+                "type": "function",
+                "name": "create_note",
+                "description": "Create a markdown note on disk.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "content": {"type": "string"},
+                    },
+                    "required": ["title", "content"],
+                    "additionalProperties": False,
                 },
-                "required": ["title", "content"],
-                "additionalProperties": False,
+                "strict": True,
             },
-            "strict": True,
-        },
-        function=create_note,
-        requires_approval=False,
-        source="local",
-    )
+            function=create_note,
+            requires_approval=False,
+            source="local",
+        )
     
-    if config.enable_memory_tools:
+    if permissions["save_memory_fact"]["enabled"]:
         tools["save_memory_fact"] = ToolDefinition(
             name="save_memory_fact",
             schema={
@@ -99,7 +101,7 @@ def build_tool_definitions(memory_store):
             source="local",
         )
     
-    if config.enable_open_app:
+    if permissions["open_app"]["enabled"]:
         tools["open_app"] = ToolDefinition(
             name="open_app",
             schema={
