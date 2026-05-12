@@ -55,5 +55,21 @@ class AppConfig:
                 "reason": "Opening desktop applications changes the user's local environment.",
             },
         }
+        
+    def enabled_tool_names(self):
+        permissions = self.tool_permissions()
+        return [
+            tool_name
+            for tool_name, policy in permissions.items()
+            if policy["enabled"]
+        ]
+
+    def disabled_tool_names(self):
+        permissions = self.tool_permissions()
+        return [
+            tool_name
+            for tool_name, policy in permissions.items()
+            if not policy["enabled"]
+        ]
 
 config = AppConfig()
