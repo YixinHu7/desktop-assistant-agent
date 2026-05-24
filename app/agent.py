@@ -17,6 +17,8 @@ from app.tool_use_policy import ToolUsePolicy
 from app.run_context import RunContext
 from app.metrics import compute_run_metrics
 from app.config import config
+from app.skills import SkillRegistry, SkillSelector
+
 
 class DesktopAssistantAgent:
     def __init__(self):
@@ -39,6 +41,12 @@ class DesktopAssistantAgent:
         self.memory_policy = MemoryPolicy(self.client)
         self.approval_policy = ApprovalPolicy()
         self.tool_use_policy = ToolUsePolicy(self.client)
+        self.skill_registry = SkillRegistry(config.skills_dir) if config.enable_skills else None
+        self.skill_selector = (
+            SkillSelector(self.client, self.skill_registry)
+            if self.skill_registry is not None
+            else None
+        )
         
         self.system_prompt = (
             "You are a concise desktop assistant agent. "
@@ -56,6 +64,7 @@ class DesktopAssistantAgent:
         plan_text: str,
         recent_history:list,
         tool_use_decision=None,
+        skill_instruction: str | None = None,
         run: RunContext = None,
     ):
         execution_instruction = (
@@ -120,6 +129,12 @@ class DesktopAssistantAgent:
                     "If no exact path has been confirmed, first call list_files with path='.'. "
                     "Only call read_file after there is evidence that the file exists."
                 )
+            })
+        
+        if skill_instruction:
+            input_items.append({
+                "role": "system",
+                "content": skill_instruction
             })
         
         for msg in recent_history:
@@ -322,6 +337,32 @@ class DesktopAssistantAgent:
         run.tool_use_decision = tool_use_decision.model_dump()
         log_event("tool_use_decision", tool_use_decision.model_dump())
         
+        # Get skill decision
+        skill_decision = None
+        selected_skill = None
+        skill_instruction = None
+        
+        if self.skill_selector is not None:
+            skill_decision = self.skill_selector.decide(user_input)
+            log_event("skill_decision", skill_decision.model_dump())
+
+            if skill_decision.should_use_skill and skill_decision.selected_skill:
+                selected_skill = self.skill_registry.get_skill(skill_decision.selected_skill)
+
+                if selected_skill:
+                    skill_instruction = (
+                        f"Selected skill: {selected_skill.name}\n"
+                        f"Skill description: {selected_skill.description}\n"
+                        f"Skill instructions:\n{selected_skill.instructions}"
+                    )
+            
+        if skill_decision is not None:
+            run.skill_decision = skill_decision.model_dump()
+
+        if selected_skill is not None:
+            run.selected_skill = selected_skill.name
+            
+            
         plan_goal = user_input
         # If route decision is "Plan"
         plan_text = "No explicit plan created."
@@ -346,6 +387,7 @@ class DesktopAssistantAgent:
             plan_text=plan_text,
             recent_history=recent_history,
             tool_use_decision=tool_use_decision,
+            skill_instruction=skill_instruction,
             run=run,
         )
         
@@ -400,6 +442,7 @@ class DesktopAssistantAgent:
                 plan_text=revised_plan_text,
                 recent_history=self.memory.get_recent_history(),
                 tool_use_decision=tool_use_decision,
+                skill_instruction=skill_instruction,
                 run=run,
             )
             

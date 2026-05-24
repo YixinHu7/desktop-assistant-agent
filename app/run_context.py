@@ -11,6 +11,9 @@ class RunContext:
     memory_decision: Optional[Dict[str, Any]] = None
     route_decision: Optional[Dict[str, Any]] = None
     tool_use_decision: Optional[Dict[str, Any]] = None
+    
+    skill_decision: Optional[Dict[str, Any]] = None
+    selected_skill: Optional[str] = None
 
     plan: Optional[Dict[str, Any]] = None
     revised_plan: Optional[Dict[str, Any]] = None
@@ -30,6 +33,8 @@ class RunContext:
             "memory_decision": self.memory_decision,
             "route_decision": self.route_decision,
             "tool_use_decision": self.tool_use_decision,
+            "skill_decision": self.skill_decision,
+            "selected_skill": self.selected_skill,
             "plan": self.plan,
             "revised_plan": self.revised_plan,
             "tool_calls_count": len(self.tool_calls),
