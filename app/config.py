@@ -21,6 +21,9 @@ class AppConfig:
     enable_open_app: bool = os.getenv("ENABLE_OPEN_APP", "true").lower() == "true"
     enable_file_tools: bool = os.getenv("ENABLE_FILE_TOOLS", "true").lower() == "true"
     enable_memory_tools: bool = os.getenv("ENABLE_MEMORY_TOOLS", "true").lower() == "true"
+    
+    skills_dir: str = os.getenv("SKILLS_DIR", "skills")
+    enable_skills: bool = os.getenv("ENABLE_SKILLS", "true").lower() == "true"
 
     def tool_permissions(self):
         return {
