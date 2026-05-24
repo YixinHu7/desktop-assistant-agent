@@ -54,6 +54,30 @@ class AppConfig:
                 "risk_level": "medium",
                 "reason": "Opening desktop applications changes the user's local environment.",
             },
+            "get_project_tree": {
+                "enabled": self.enable_file_tools,
+                "requires_approval": False,
+                "risk_level": "low",
+                "reason": "Reading local project structure is allowed in this local assistant context.",
+            },
+            "find_file": {
+                "enabled": self.enable_file_tools,
+                "requires_approval": False,
+                "risk_level": "low",
+                "reason": "Finding local project files is allowed in this local assistant context.",
+            },
+            "search_files": {
+                "enabled": self.enable_file_tools,
+                "requires_approval": False,
+                "risk_level": "low",
+                "reason": "Searching local project files is allowed in this local assistant context.",
+            },
+            "read_multiple_files": {
+                "enabled": self.enable_file_tools,
+                "requires_approval": False,
+                "risk_level": "low",
+                "reason": "Reading multiple local project files is allowed in this local assistant context.",
+            },
         }
         
     def enabled_tool_names(self):

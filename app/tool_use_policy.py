@@ -37,6 +37,10 @@ Tool meanings:
 - create_note: create a markdown note
 - save_memory_fact: save durable user memory
 - open_app: open a desktop application
+- get_project_tree: show a directory tree for a project
+- find_file: find files by filename
+- search_files: search text content across files
+- read_multiple_files: read several local files at once
 
 Rules:
 - Only include enabled tools in likely_tools.
@@ -50,6 +54,10 @@ Rules:
 - If the user asks to create or save a note and create_note is enabled, likely_tools should include create_note.
 - If the user asks to inspect a repository, project, directory, or files and file tools are enabled, likely_tools should include list_files and possibly read_file.
 - If the user asks to open an application and open_app is enabled, likely_tools should include open_app.
+- If the user asks to review a repository or project architecture, likely_tools should include get_project_tree, read_multiple_files, and possibly search_files.
+- If the user asks to find a specific file, likely_tools should include find_file.
+- If the user asks about where something is defined or mentioned, likely_tools should include search_files.
+- If the user asks to summarize multiple project files, likely_tools should include read_multiple_files.
 - Avoid tools that are unrelated to the user's request.
 
 Route:
