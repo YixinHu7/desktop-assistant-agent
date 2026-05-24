@@ -18,6 +18,9 @@ Rules:
 - Keep steps minimal
 - Do not execute anything
 - Only produce a plan
+- For repository architecture review, prefer using get_project_tree first.
+- For multi-file analysis, identify key files and then read them with read_multiple_files.
+- For locating definitions or references, use search_files.
 
 Memory context:
 {memory_context}
