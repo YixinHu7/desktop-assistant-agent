@@ -30,6 +30,9 @@ def compute_run_metrics(run_summary: Dict[str, Any]) -> Dict[str, Any]:
     route_decision = run_summary.get("route_decision") or {}
     tool_use_decision = run_summary.get("tool_use_decision") or {}
     replan_decision = run_summary.get("replan_decision") or {}
+    
+    skill_decision = run_summary.get("skill_decision") or {}
+    selected_skill = run_summary.get("selected_skill")
 
     final_answer = run_summary.get("final_answer") or ""
 
@@ -38,6 +41,10 @@ def compute_run_metrics(run_summary: Dict[str, Any]) -> Dict[str, Any]:
         "route": route_decision.get("route"),
         "used_plan": run_summary.get("plan") is not None,
         "used_revised_plan": run_summary.get("revised_plan") is not None,
+        
+        "skill_used": selected_skill is not None,
+        "selected_skill": selected_skill,
+        "skill_should_use": skill_decision.get("should_use_skill"),
 
         "tool_policy_should_use_tools": tool_use_decision.get("should_use_tools"),
         "tool_policy_requires_grounding": tool_use_decision.get("requires_grounding"),
