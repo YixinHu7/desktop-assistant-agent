@@ -60,6 +60,22 @@ def main():
     for item in metrics:
         route = item.get("route") or "unknown"
         routes[route] = routes.get(route, 0) + 1
+        
+    skills = {}
+    for item in metrics:
+        skill = item.get("selected_skill")
+        if skill:
+            skills[skill] = skills.get(skill, 0) + 1
+
+    skill_using_runs = sum(
+        1 for item in metrics
+        if item.get("skill_used")
+    )
+    
+    skill_failure_runs = sum(
+        1 for item in metrics
+        if item.get("skill_used") and item.get("has_possible_failure")
+    )
 
     tool_using_runs = sum(
         1 for item in metrics
@@ -128,6 +144,15 @@ def main():
         print(f"  - {route}: {count}")
 
     print()
+
+    print("Skills:")
+    print(f"  - Skill-using runs: {skill_using_runs}")
+    print(f"  - Skill runs with possible failure: {skill_failure_runs}")
+    if skills:
+        for skill, count in sorted(skills.items()):
+            print(f"  - {skill}: {count}")
+    else:
+        print("  - No skills used")
 
     print("Tool Calls:")
     print(f"  - Total tool calls: {total_tool_calls}")
