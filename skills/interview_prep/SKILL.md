@@ -1,6 +1,7 @@
 ---
 name: interview_prep
 description: Use this skill when the user asks to prepare for an interview, create an interview checklist, practice behavioral questions, prepare STAR stories, or organize interview materials.
+triggers: interview, interview preparation, interview checklist, mock interview, behavioral questions, STAR stories
 ---
 
 # Interview Prep Skill

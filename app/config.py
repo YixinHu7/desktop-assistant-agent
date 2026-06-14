@@ -24,6 +24,14 @@ class AppConfig:
     
     skills_dir: str = os.getenv("SKILLS_DIR", "skills")
     enable_skills: bool = os.getenv("ENABLE_SKILLS", "true").lower() == "true"
+    
+    skill_selection_threshold: float = float(
+        os.getenv("SKILL_SELECTION_THRESHOLD", "0.65")
+    )
+
+    skill_rule_min_matches: int = int(
+        os.getenv("SKILL_RULE_MIN_MATCHES", "2")
+    )
 
     def tool_permissions(self):
         return {

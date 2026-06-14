@@ -1,6 +1,7 @@
 ---
 name: repo_review
 description: Use this skill when the user asks to review a repository, analyze project architecture, summarize a codebase, inspect project structure, or create a project overview note.
+triggers: repo, repository, codebase, project architecture, project structure, review this project, review this repository
 ---
 
 # Repo Review Skill
