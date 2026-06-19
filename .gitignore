@@ -11,3 +11,10 @@ data/
 
 .DS_Store
 .vscode
+
+# evals
+evals/results/*
+!evals/results/.gitkeep
+
+evals/reports/*
+!evals/reports/.gitkeep
