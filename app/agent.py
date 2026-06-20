@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Any, Optional
 from openai import OpenAI
 
 from app.memory import MemoryStore
@@ -47,15 +48,56 @@ class DesktopAssistantAgent:
             if self.skill_registry is not None
             else None
         )
+        self.last_run_summary: Optional[dict[str, Any]] = None
         
         self.system_prompt = (
             "You are a concise desktop assistant agent. "
             "Be helpful, practical, and operationally clear. "
             "Use tools when they are genuinely useful. "
-            "Do not invent tool results."
+            "Do not invent tool results. "
             "When a plan is provided, use it to guide execution step by step. "
             "Only mark progress that is supported by available evidence."
         )
+    
+    
+    def _finalize_run(
+        self,
+        run: RunContext,
+        final_answer: str,
+        used_tools: list[str],
+    ) -> str:
+        self.memory.add_history(
+            "assistant",
+            final_answer,
+        )
+
+        log_event(
+            "final_answer",
+            {
+                "text": final_answer,
+                "used_tools": used_tools,
+            },
+        )
+
+        run.final_answer = final_answer
+        run_summary = run.to_summary()
+
+        self.last_run_summary = run_summary
+
+        log_event(
+            "run_summary",
+            run_summary,
+        )
+
+        run_metrics = compute_run_metrics(run_summary)
+
+        log_event(
+            "run_metrics",
+            run_metrics,
+        )
+
+        return final_answer
+    
     
     def _run_execution_cycle(
         self,
@@ -175,15 +217,38 @@ class DesktopAssistantAgent:
                 # Record the used tools
                 used_tools.append(call.name)
                 
-                if not self._ask_for_approval(call.name, arguments):
-                    result = {"ok": False, "error": "User denied approval"}
+                approved = self._ask_for_approval(
+                    tool_name=call.name,
+                    arguments=arguments,
+                    run=run,
+                    source="primary",
+                )
+                
+                if not approved:
+                    result = {
+                        "ok": False,
+                        "error": "User denied approval",
+                        "metadata": {
+                            "tool": call.name,
+                            "denied": True,
+                        },
+                    }
+                    tool_status = "denied"
                 else:
                     result = self.executor.execute(call.name, arguments)
+                    
+                    tool_status = (
+                        "completed"
+                        if result.get("ok", False)
+                        else "failed"
+                    )
                 
                 tool_call_payload = {
-                    "tool_name": call.name,
+                    "tool": call.name,
                     "arguments": arguments,
-                    "result": result
+                    "kind": "primary",
+                    "status": tool_status,
+                    "result": result,
                 }
                 
                 if run is not None:
@@ -201,9 +266,21 @@ class DesktopAssistantAgent:
                 
                 final_tool_result = result
                 
-                # Try deterministic recovery if the tool failed
-                recovery_decision = self.recovery.maybe_recover(call.name, arguments, result)
+                # Do not attempt recovery when the user denied approval.
+                recovery_decision = {
+                    "should_retry": False,
+                    "retry_tool": None,
+                    "retry_arguments": {},
+                    "reason": "",
+                }
                 
+                if approved:
+                    recovery_decision = self.recovery.maybe_recover(
+                        call.name,
+                        arguments,
+                        result,
+                    )
+                    
                 if recovery_decision["should_retry"]:
                     retry_tool = recovery_decision["retry_tool"]
                     retry_arguments = recovery_decision["retry_arguments"]
@@ -222,7 +299,56 @@ class DesktopAssistantAgent:
 
                     log_event("tool_recovery_attempt", recovery_attempt_payload)
                     
-                    retry_result = self.executor.execute(retry_tool, retry_arguments)
+                    retry_approved = self._ask_for_approval(
+                        tool_name=retry_tool,
+                        arguments=retry_arguments,
+                        run=run,
+                        source="recovery",
+                    )
+                    
+                    if not retry_approved:
+                        retry_result = {
+                            "ok": False,
+                            "error": "User denied recovery tool approval",
+                            "metadata": {
+                                "tool": retry_tool,
+                                "denied": True,
+                            },
+                        }
+                        retry_status = "denied"
+                    else:
+                        retry_result = self.executor.execute(
+                            retry_tool,
+                            retry_arguments,
+                        )
+
+                        retry_status = (
+                            "completed"
+                            if retry_result.get("ok", False)
+                            else "failed"
+                        )
+                    
+                    # Recovery tool calls must also be included in used_tools.
+                    used_tools.append(retry_tool)
+
+                    recovery_tool_call_payload = {
+                        "tool": retry_tool,
+                        "arguments": retry_arguments,
+                        "kind": "recovery",
+                        "recovery_for": call.name,
+                        "status": retry_status,
+                        "result": retry_result,
+                    }
+                    
+                    if run is not None:
+                        run.tool_calls.append(
+                            recovery_tool_call_payload
+                        )
+
+                    log_event(
+                        "tool_call",
+                        recovery_tool_call_payload,
+                    )
                     
                     tool_results_for_summary.append({
                         "tool_name": retry_tool,
@@ -230,20 +356,34 @@ class DesktopAssistantAgent:
                         "result": retry_result,
                         "kind": "recovery",
                         "recovery_for": call.name,
-                        "recovered": retry_result.get("ok", False),
+                        "recovered": retry_result.get(
+                            "ok",
+                            False,
+                        ),
                     })
                     
                     recovery_result_payload = {
                         "type": "result",
+                        "original_tool": call.name,
                         "retry_tool": retry_tool,
                         "retry_arguments": retry_arguments,
                         "retry_result": retry_result,
+                        "approved": retry_approved,
+                        "success": retry_result.get(
+                            "ok",
+                            False,
+                        ),
                     }
                     
                     if run is not None:
-                        run.recovery_events.append(recovery_result_payload)
+                        run.recovery_events.append(
+                            recovery_result_payload
+                        )
 
-                    log_event("tool_recovery_result", recovery_result_payload)
+                    log_event(
+                        "tool_recovery_result",
+                        recovery_result_payload,
+                    )
                     
                     final_tool_result = {
                         "original_failure": {
@@ -256,7 +396,7 @@ class DesktopAssistantAgent:
                             "arguments": retry_arguments,
                             "result": retry_result,
                             "reason": recovery_decision["reason"],
-                        }
+                        },
                     }
                     
                 tool_outputs.append({
@@ -274,30 +414,60 @@ class DesktopAssistantAgent:
                 parallel_tool_calls=False
             )     
     
-    def _ask_for_approval(self, tool_name: str, arguments: dict) -> bool:
-        decision = self.approval_policy.decide(tool_name, arguments)
-        
-        log_event("approval_decision", {
-            "tool_name": tool_name,
+    
+    def _ask_for_approval(
+        self,
+        tool_name: str,
+        arguments: dict,
+        run: Optional[RunContext] = None,
+        source: str = "primary",
+    ) -> bool:
+        decision = self.approval_policy.decide(
+            tool_name,
+            arguments,
+        )
+
+        if decision.required:
+            print("\n[Approval Required]")
+            print(f"Tool: {tool_name}")
+            print(f"Arguments: {arguments}")
+            print(f"Risk: {decision.risk_level}")
+            print(f"Reason: {decision.reason}")
+
+            answer = input(
+                "Approve? (y/n): "
+            ).strip().lower()
+
+            approved = answer == "y"
+        else:
+            approved = True
+
+        approval_payload = {
+            "tool": tool_name,
             "arguments": arguments,
             "required": decision.required,
+            "approved": approved,
             "risk_level": decision.risk_level,
             "reason": decision.reason,
-        })
-        
-        if not decision.required:
-            return True
-        
-        print(f"\n[Approval Required]")
-        print(f"Tool: {tool_name}")
-        print(f"Arguments: {arguments}")
-        print(f"Risk: {decision.risk_level}")
-        print(f"Reason: {decision.reason}")
-        
-        answer = input("Approve? (y/n): ").strip().lower()
-        return answer == "y"
+            "source": source,
+        }
+
+        if run is not None:
+            run.approval_decisions.append(
+                approval_payload
+            )
+
+        log_event(
+            "approval_decision",
+            approval_payload,
+        )
+
+        return approved
+    
     
     def handle_user_message(self, user_input: str) -> str:
+        self.last_run_summary = None
+
         run = RunContext(user_input=user_input)
         
         self.memory.add_history("user", user_input)
@@ -486,19 +656,9 @@ class DesktopAssistantAgent:
             "recovery_succeeded": recovery_succeeded,
         })
             
-        self.memory.add_history("assistant", final_answer)
-
-        log_event("final_answer", {
-            "text": final_answer,
-            "used_tools": used_tools
-        })
-        
-        run.final_answer = final_answer
-        run_summary = run.to_summary()
-        log_event("run_summary", run_summary)
-        
-        run_metrics = compute_run_metrics(run_summary)
-        log_event("run_metrics", run_metrics)
-
-        return final_answer
+        return self._finalize_run(
+            run=run,
+            final_answer=final_answer,
+            used_tools=used_tools,
+        )
         
