@@ -16,8 +16,11 @@ from app.evaluation.models import (
 )
 from app.evaluation.results import (
     EvalCaseResult,
+    EvalCaseRunResult,
     EvalCheckResult,
     EvalCheckStatus,
+    EvalExecutionError,
+    EvalRunReport,
 )
 from app.evaluation.scorers import (
     score_approval,
@@ -34,25 +37,29 @@ from app.evaluation.snapshot import (
     RuntimeEvalSnapshot,
 )
 
+
 __all__ = [
     "AnswerExpectation",
     "CompletionStatus",
     "EvalCase",
     "EvalCaseLoadError",
+    "EvalCaseResult",
+    "EvalCaseRunResult",
+    "EvalCheckResult",
+    "EvalCheckStatus",
     "EvalEnvironment",
+    "EvalExecutionError",
     "EvalExpectedOutcome",
+    "EvalRunReport",
     "EvalSuite",
     "ExpectedRoute",
     "LoadedEvalCase",
-    "ToolArgumentExpectation",
-    "load_eval_cases",
-    "load_eval_file",
-    "EvalCaseResult",
-    "EvalCheckResult",
-    "EvalCheckStatus",
     "ObservedApproval",
     "ObservedToolCall",
     "RuntimeEvalSnapshot",
+    "ToolArgumentExpectation",
+    "load_eval_cases",
+    "load_eval_file",
     "score_approval",
     "score_eval_case",
     "score_recovery",
