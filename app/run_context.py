@@ -19,6 +19,9 @@ class RunContext:
     revised_plan: Optional[Dict[str, Any]] = None
 
     tool_calls: List[Dict[str, Any]] = field(default_factory=list)
+    
+    approval_decisions: List[Dict[str, Any]] = field(default_factory=list)
+    
     recovery_events: List[Dict[str, Any]] = field(default_factory=list)
 
     step_review: Optional[Dict[str, Any]] = None
@@ -39,7 +42,17 @@ class RunContext:
             "revised_plan": self.revised_plan,
             "tool_calls_count": len(self.tool_calls),
             "tool_calls": self.tool_calls,
+            
+            "approval_decisions_count": len(
+                self.approval_decisions
+            ),
+            "approval_decisions": self.approval_decisions,
+            "recovery_events_count": len(
+                self.recovery_events
+            ),
             "recovery_events": self.recovery_events,
+            # Compatibility field used by evaluation scorers.
+            "recovery_attempts": self.recovery_events,
             "step_review": self.step_review,
             "replan_decision": self.replan_decision,
             "final_answer": self.final_answer,

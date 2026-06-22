@@ -225,6 +225,7 @@ def _extract_recovery_status(
 
     for key in (
         "recovery_attempts",
+        "recovery_events",
         "recovery_actions",
         "recoveries",
     ):
