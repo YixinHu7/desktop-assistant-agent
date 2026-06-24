@@ -32,6 +32,11 @@ class AppConfig:
     skill_rule_min_matches: int = int(
         os.getenv("SKILL_RULE_MIN_MATCHES", "2")
     )
+    
+    eval_mode: bool = os.getenv("EVAL_MODE","false",).lower() == "true"
+    eval_fixture_root: str | None = os.getenv("EVAL_FIXTURE_ROOT")
+    eval_allow_real_side_effects: bool = os.getenv("EVAL_ALLOW_REAL_SIDE_EFFECTS","false",).lower() == "true"
+
 
     def tool_permissions(self):
         return {
