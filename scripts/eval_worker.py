@@ -45,43 +45,45 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def configure_case_environment(
-    case: EvalCase,
-    work_dir: Path,
-) -> None:
-    """
-    Configure one isolated runtime environment before importing
-    the agent and config modules.
-    """
-
+def configure_case_environment(case: EvalCase, work_dir: Path) -> None:
     for key, value in case.environment.env.items():
         os.environ[key] = value
+
+    fixture_root = case.environment.fixture_root
+
+    if fixture_root:
+        resolved_fixture_root = Path(fixture_root)
+
+        if not resolved_fixture_root.is_absolute():
+            resolved_fixture_root = PROJECT_ROOT / resolved_fixture_root
+
+        resolved_fixture_root = resolved_fixture_root.resolve()
+
+        if not resolved_fixture_root.is_dir():
+            raise ValueError(
+                f"Evaluation fixture root does not exist: {resolved_fixture_root}"
+            )
+
+        os.environ["EVAL_FIXTURE_ROOT"] = str(resolved_fixture_root)
+    else:
+        os.environ.pop("EVAL_FIXTURE_ROOT", None)
+
+    os.environ["EVAL_ALLOW_REAL_SIDE_EFFECTS"] = (
+        "true" if case.environment.allow_real_side_effects else "false"
+    )
 
     eval_data_dir = work_dir / "data"
     eval_notes_dir = eval_data_dir / "notes"
 
-    eval_data_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    eval_notes_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+    eval_data_dir.mkdir(parents=True, exist_ok=True)
+    eval_notes_dir.mkdir(parents=True, exist_ok=True)
 
     os.environ["EVAL_MODE"] = "true"
     os.environ["DATA_DIR"] = str(eval_data_dir)
-    os.environ["MEMORY_PATH"] = str(
-        eval_data_dir / "memory.json"
-    )
-    os.environ["TRACE_PATH"] = str(
-        eval_data_dir / "trace.jsonl"
-    )
-    os.environ["NOTES_DIR"] = str(
-        eval_notes_dir
-    )
-
+    os.environ["MEMORY_PATH"] = str(eval_data_dir / "memory.json")
+    os.environ["TRACE_PATH"] = str(eval_data_dir / "trace.jsonl")
+    os.environ["NOTES_DIR"] = str(eval_notes_dir)
+    
 
 def write_output(
     output_path: Path,
