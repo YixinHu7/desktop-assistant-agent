@@ -30,11 +30,16 @@ from app.evaluation.scorers import (
     score_skill_selection,
     score_tool_arguments,
     score_tool_selection,
+    score_task_completion,
 )
 from app.evaluation.snapshot import (
     ObservedApproval,
     ObservedToolCall,
     RuntimeEvalSnapshot,
+)
+from app.evaluation.completion import (
+    CompletionAssessment,
+    assess_task_completion,
 )
 
 
@@ -67,4 +72,7 @@ __all__ = [
     "score_skill_selection",
     "score_tool_arguments",
     "score_tool_selection",
+    "CompletionAssessment",
+    "assess_task_completion",
+    "score_task_completion",
 ]

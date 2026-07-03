@@ -6,6 +6,8 @@ from typing import Any, Optional
 class ObservedToolCall:
     name: str
     arguments: dict[str, Any] = field(default_factory=dict)
+    status: Optional[str] = None
+    ok: Optional[bool] = None
 
 
 @dataclass(frozen=True)
@@ -25,6 +27,9 @@ class RuntimeEvalSnapshot:
 
     recovery_occurred: bool
     final_answer: str
+    
+    tool_policy_should_use_tools: Optional[bool]
+    remaining_steps: list[str]
 
     @classmethod
     def from_run_summary(
@@ -63,6 +68,14 @@ class RuntimeEvalSnapshot:
             )
         else:
             skill_used = bool(should_use_skill)
+            
+        tool_use_decision = run_summary.get("tool_use_decision") or {}
+        step_review = run_summary.get("step_review") or {}
+
+        remaining_steps = step_review.get("remaining_steps") or []
+
+        if not isinstance(remaining_steps, list):
+            remaining_steps = []
 
         return cls(
             route=route,
@@ -70,12 +83,10 @@ class RuntimeEvalSnapshot:
             selected_skill=selected_skill,
             tool_calls=_extract_tool_calls(run_summary),
             approvals=_extract_approvals(run_summary),
-            recovery_occurred=_extract_recovery_status(
-                run_summary
-            ),
-            final_answer=str(
-                run_summary.get("final_answer") or ""
-            ),
+            recovery_occurred=_extract_recovery_status(run_summary),
+            final_answer=str(run_summary.get("final_answer") or ""),
+            tool_policy_should_use_tools=tool_use_decision.get("should_use_tools"),
+            remaining_steps=[str(step) for step in remaining_steps],
         )
 
 
@@ -90,43 +101,35 @@ def _extract_tool_calls(
     if not isinstance(raw_calls, list):
         return []
 
-    calls: list[ObservedToolCall] = []
+    calls = []
 
     for item in raw_calls:
         if isinstance(item, str):
-            calls.append(
-                ObservedToolCall(
-                    name=item,
-                    arguments={},
-                )
-            )
+            calls.append(ObservedToolCall(name=item))
             continue
 
         if not isinstance(item, dict):
             continue
 
-        name = (
-            item.get("name")
-            or item.get("tool")
-            or item.get("tool_name")
-        )
+        name = item.get("name") or item.get("tool") or item.get("tool_name")
 
         if not name:
             continue
 
-        arguments = (
-            item.get("arguments")
-            or item.get("args")
-            or {}
-        )
+        arguments = item.get("arguments") or item.get("args") or {}
 
         if not isinstance(arguments, dict):
             arguments = {}
+
+        result = item.get("result")
+        ok = result.get("ok") if isinstance(result, dict) else None
 
         calls.append(
             ObservedToolCall(
                 name=str(name),
                 arguments=arguments,
+                status=item.get("status"),
+                ok=ok if isinstance(ok, bool) else None,
             )
         )
 
