@@ -13,6 +13,7 @@ from app.evaluation.snapshot import (
     ObservedToolCall,
     RuntimeEvalSnapshot,
 )
+from app.evaluation.completion import assess_task_completion
 
 
 def _passed(
@@ -515,6 +516,48 @@ def score_recovery(
     )
 
 
+def score_task_completion(
+    case: EvalCase,
+    snapshot: RuntimeEvalSnapshot,
+) -> EvalCheckResult:
+    expected_status = case.expected.completion_status
+
+    if expected_status is None:
+        return _skipped(
+            name="task_completion",
+            message="No task completion expectation was defined.",
+        )
+
+    assessment = assess_task_completion(case, snapshot)
+
+    details = {
+        "expected": expected_status.value,
+        "actual": assessment.status.value,
+        "reason": assessment.reason,
+        "signals": assessment.signals,
+    }
+
+    if assessment.status == expected_status:
+        return _passed(
+            name="task_completion",
+            message=(
+                "Task completion status matched: "
+                f"{assessment.status.value}."
+            ),
+            details=details,
+        )
+
+    return _failed(
+        name="task_completion",
+        message=(
+            f"Expected completion status '{expected_status.value}', "
+            f"but observed '{assessment.status.value}'. "
+            f"{assessment.reason}"
+        ),
+        details=details,
+    )
+    
+    
 def score_eval_case(
     case: EvalCase,
     run_summary: dict[str, Any],
@@ -530,6 +573,7 @@ def score_eval_case(
         score_tool_arguments(case, snapshot),
         score_approval(case, snapshot),
         score_recovery(case, snapshot),
+        score_task_completion(case, snapshot),
     ]
 
     scored_checks = [
