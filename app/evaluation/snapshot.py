@@ -8,6 +8,7 @@ class ObservedToolCall:
     arguments: dict[str, Any] = field(default_factory=dict)
     status: Optional[str] = None
     ok: Optional[bool] = None
+    result: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -90,9 +91,7 @@ class RuntimeEvalSnapshot:
         )
 
 
-def _extract_tool_calls(
-    run_summary: dict[str, Any],
-) -> list[ObservedToolCall]:
+def _extract_tool_calls(run_summary: dict[str, Any]) -> list[ObservedToolCall]:
     raw_calls = run_summary.get("tool_calls")
 
     if raw_calls is None:
@@ -122,14 +121,18 @@ def _extract_tool_calls(
             arguments = {}
 
         result = item.get("result")
-        ok = result.get("ok") if isinstance(result, dict) else None
+        result = result if isinstance(result, dict) else {}
+
+        ok = result.get("ok")
+        ok = ok if isinstance(ok, bool) else None
 
         calls.append(
             ObservedToolCall(
                 name=str(name),
                 arguments=arguments,
                 status=item.get("status"),
-                ok=ok if isinstance(ok, bool) else None,
+                ok=ok,
+                result=result,
             )
         )
 
