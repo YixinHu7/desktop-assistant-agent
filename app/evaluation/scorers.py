@@ -14,7 +14,7 @@ from app.evaluation.snapshot import (
     RuntimeEvalSnapshot,
 )
 from app.evaluation.completion import assess_task_completion
-
+from app.evaluation.grounding import assess_answer_grounding
 
 def _passed(
     name: str,
@@ -556,7 +556,145 @@ def score_task_completion(
         ),
         details=details,
     )
-    
+
+
+def score_answer_requirements(
+    case: EvalCase,
+    snapshot: RuntimeEvalSnapshot,
+) -> EvalCheckResult:
+    expectation = case.expected.answer
+
+    has_expectation = any(
+        [
+            expectation.contains_all,
+            expectation.contains_any,
+            expectation.excludes,
+            expectation.min_characters is not None,
+        ]
+    )
+
+    if not has_expectation:
+        return _skipped(
+            name="answer_requirements",
+            message="No deterministic answer requirements were defined.",
+        )
+
+    answer = snapshot.final_answer
+    normalized_answer = answer.lower()
+
+    checks = []
+    failures = []
+
+    missing_required = [
+        phrase
+        for phrase in expectation.contains_all
+        if phrase.lower() not in normalized_answer
+    ]
+
+    contains_all_passed = not missing_required
+    checks.append(contains_all_passed)
+
+    if missing_required:
+        failures.append(f"Missing required phrases: {missing_required}.")
+
+    if expectation.contains_any:
+        matched_any = [
+            phrase
+            for phrase in expectation.contains_any
+            if phrase.lower() in normalized_answer
+        ]
+
+        contains_any_passed = bool(matched_any)
+        checks.append(contains_any_passed)
+
+        if not contains_any_passed:
+            failures.append(
+                "The answer did not contain any accepted phrase: "
+                f"{expectation.contains_any}."
+            )
+    else:
+        matched_any = []
+
+    present_excluded = [
+        phrase
+        for phrase in expectation.excludes
+        if phrase.lower() in normalized_answer
+    ]
+
+    excludes_passed = not present_excluded
+    checks.append(excludes_passed)
+
+    if present_excluded:
+        failures.append(f"Excluded phrases were present: {present_excluded}.")
+
+    if expectation.min_characters is not None:
+        length_passed = len(answer.strip()) >= expectation.min_characters
+        checks.append(length_passed)
+
+        if not length_passed:
+            failures.append(
+                f"Expected at least {expectation.min_characters} characters, "
+                f"observed {len(answer.strip())}."
+            )
+
+    score = sum(checks) / len(checks)
+
+    details = {
+        "missing_required": missing_required,
+        "matched_any": matched_any,
+        "present_excluded": present_excluded,
+        "answer_length": len(answer.strip()),
+        "minimum_characters": expectation.min_characters,
+    }
+
+    if all(checks):
+        return _passed(
+            name="answer_requirements",
+            message="All deterministic answer requirements passed.",
+            details=details,
+        )
+
+    return _failed(
+        name="answer_requirements",
+        message=" ".join(failures),
+        details=details,
+        score=score,
+    )
+
+
+def score_answer_grounding(
+    case: EvalCase,
+    snapshot: RuntimeEvalSnapshot,
+) -> EvalCheckResult:
+    expectation = case.expected.answer.grounding
+
+    if not expectation.required:
+        return _skipped(
+            name="answer_grounding",
+            message="No answer grounding expectation was defined.",
+        )
+
+    assessment = assess_answer_grounding(case, snapshot)
+
+    details = {
+        "observed_files": assessment.observed_files,
+        "answer_files": assessment.answer_files,
+        "unsupported_files": assessment.unsupported_files,
+    }
+
+    if assessment.passed:
+        return _passed(
+            name="answer_grounding",
+            message=assessment.reason,
+            details=details,
+        )
+
+    return _failed(
+        name="answer_grounding",
+        message=assessment.reason,
+        details=details,
+    )
+            
     
 def score_eval_case(
     case: EvalCase,
@@ -574,6 +712,8 @@ def score_eval_case(
         score_approval(case, snapshot),
         score_recovery(case, snapshot),
         score_task_completion(case, snapshot),
+        score_answer_requirements(case, snapshot),
+        score_answer_grounding(case, snapshot),
     ]
 
     scored_checks = [

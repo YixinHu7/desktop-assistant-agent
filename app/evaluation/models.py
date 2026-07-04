@@ -56,10 +56,19 @@ class ToolArgumentExpectation(StrictEvalModel):
     match: Literal["subset", "exact"] = "subset"
 
 
+class GroundingExpectation(StrictEvalModel):
+    required: bool = False
+    require_successful_tool: bool = True
+    require_evidence_reference: bool = False
+    forbid_unobserved_file_claims: bool = False
+    
+    
 class AnswerExpectation(StrictEvalModel):
     contains_all: list[str] = Field(default_factory=list)
     contains_any: list[str] = Field(default_factory=list)
     excludes: list[str] = Field(default_factory=list)
+    min_characters: Optional[int] = Field(default=None, ge=1)
+    grounding: GroundingExpectation = Field(default_factory=GroundingExpectation)
 
 
 class EvalEnvironment(StrictEvalModel):

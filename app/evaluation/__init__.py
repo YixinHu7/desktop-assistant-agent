@@ -13,6 +13,7 @@ from app.evaluation.models import (
     EvalSuite,
     ExpectedRoute,
     ToolArgumentExpectation,
+    GroundingExpectation,
 )
 from app.evaluation.results import (
     EvalCaseResult,
@@ -31,6 +32,8 @@ from app.evaluation.scorers import (
     score_tool_arguments,
     score_tool_selection,
     score_task_completion,
+    score_answer_grounding,
+    score_answer_requirements,
 )
 from app.evaluation.snapshot import (
     ObservedApproval,
@@ -41,7 +44,12 @@ from app.evaluation.completion import (
     CompletionAssessment,
     assess_task_completion,
 )
-
+from app.evaluation.grounding import (
+    GroundingAssessment,
+    assess_answer_grounding,
+    collect_observed_file_tokens,
+    extract_file_tokens,
+)
 
 __all__ = [
     "AnswerExpectation",
@@ -75,4 +83,11 @@ __all__ = [
     "CompletionAssessment",
     "assess_task_completion",
     "score_task_completion",
+    "GroundingAssessment",
+    "GroundingExpectation",
+    "assess_answer_grounding",
+    "collect_observed_file_tokens",
+    "extract_file_tokens",
+    "score_answer_grounding",
+    "score_answer_requirements",
 ]
