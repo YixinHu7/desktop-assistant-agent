@@ -37,6 +37,9 @@ class AppConfig:
     eval_fixture_root: str | None = os.getenv("EVAL_FIXTURE_ROOT")
     eval_allow_real_side_effects: bool = os.getenv("EVAL_ALLOW_REAL_SIDE_EFFECTS","false",).lower() == "true"
 
+    enable_llm_judge: bool = os.getenv("ENABLE_LLM_JUDGE", "false").lower() == "true"
+    judge_model: str = os.getenv("JUDGE_MODEL", os.getenv("OPENAI_MODEL", "gpt-4.1-mini"))
+    judge_weight: float = float(os.getenv("JUDGE_WEIGHT", "0.25"))
 
     def tool_permissions(self):
         return {

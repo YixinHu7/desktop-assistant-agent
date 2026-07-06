@@ -71,6 +71,12 @@ class AnswerExpectation(StrictEvalModel):
     grounding: GroundingExpectation = Field(default_factory=GroundingExpectation)
 
 
+class JudgeExpectation(StrictEvalModel):
+    enabled: bool = False
+    min_overall_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    rubric: Optional[str] = None
+
+
 class EvalEnvironment(StrictEvalModel):
     """
     Environment configuration used for one evaluation case.
@@ -119,6 +125,8 @@ class EvalExpectedOutcome(StrictEvalModel):
     answer: AnswerExpectation = Field(
         default_factory=AnswerExpectation
     )
+    
+    judge: JudgeExpectation = Field(default_factory=JudgeExpectation)
 
     @field_validator(
         "required_tools",
