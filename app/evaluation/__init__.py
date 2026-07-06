@@ -14,6 +14,7 @@ from app.evaluation.models import (
     ExpectedRoute,
     ToolArgumentExpectation,
     GroundingExpectation,
+    JudgeExpectation,
 )
 from app.evaluation.results import (
     EvalCaseResult,
@@ -22,6 +23,7 @@ from app.evaluation.results import (
     EvalCheckStatus,
     EvalExecutionError,
     EvalRunReport,
+    EvalJudgeResult,
 )
 from app.evaluation.scorers import (
     score_approval,
@@ -90,4 +92,6 @@ __all__ = [
     "extract_file_tokens",
     "score_answer_grounding",
     "score_answer_requirements",
+    "JudgeExpectation",
+    "EvalJudgeResult",
 ]

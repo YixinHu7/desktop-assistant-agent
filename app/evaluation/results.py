@@ -39,6 +39,16 @@ class EvalExecutionError(BaseModel):
     traceback: Optional[str] = None
 
 
+class EvalJudgeResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool
+    score: Optional[float] = None
+    passed: Optional[bool] = None
+    details: dict[str, Any] = Field(default_factory=dict)
+    error: Optional[EvalExecutionError] = None
+
+
 class EvalCaseRunResult(BaseModel):
     """
     Complete result for one end-to-end evaluation case.
@@ -71,6 +81,8 @@ class EvalCaseRunResult(BaseModel):
     )
 
     error: Optional[EvalExecutionError] = None
+    
+    judge: Optional[EvalJudgeResult] = None
 
 
 class EvalRunReport(BaseModel):
