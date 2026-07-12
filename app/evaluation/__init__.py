@@ -52,6 +52,13 @@ from app.evaluation.grounding import (
     collect_observed_file_tokens,
     extract_file_tokens,
 )
+from app.evaluation.failure_analysis import (
+    FailureSummary,
+    build_failure_summary,
+    find_latest_eval_result,
+    load_eval_report,
+    render_failure_report,
+)
 
 __all__ = [
     "AnswerExpectation",
@@ -94,4 +101,9 @@ __all__ = [
     "score_answer_requirements",
     "JudgeExpectation",
     "EvalJudgeResult",
+    "FailureSummary",
+    "build_failure_summary",
+    "find_latest_eval_result",
+    "load_eval_report",
+    "render_failure_report",
 ]
