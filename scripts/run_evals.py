@@ -28,6 +28,7 @@ from app.evaluation import (  # noqa: E402
     load_eval_cases,
     score_eval_case,
 )
+from app.evaluation.failure_analysis import render_failure_report  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -84,6 +85,24 @@ def parse_args() -> argparse.Namespace:
         "--judge-all",
         action="store_true",
         help="Run LLM-as-Judge for all selected cases.",
+    )
+    
+    parser.add_argument(
+        "--no-failure-report",
+        action="store_true",
+        help="Disable automatic Markdown failure report generation.",
+    )
+
+    parser.add_argument(
+        "--failure-report-output",
+        default=None,
+        help="Optional path for the Markdown failure report.",
+    )
+
+    parser.add_argument(
+        "--print-failure-report",
+        action="store_true",
+        help="Print the generated Markdown failure report to stdout.",
     )
 
     return parser.parse_args()
@@ -371,6 +390,61 @@ def resolve_output_path(
     return PROJECT_ROOT / "evals" / "results" / f"{run_id}.json"
 
 
+def has_eval_failures(report: EvalRunReport) -> bool:
+    return report.failed_cases > 0 or report.error_cases > 0
+
+
+def resolve_failure_report_path(
+    requested_output: str | None,
+    result_output_path: Path,
+) -> Path:
+    if requested_output:
+        output_path = Path(requested_output)
+
+        if not output_path.is_absolute():
+            output_path = PROJECT_ROOT / output_path
+
+        return output_path
+
+    return PROJECT_ROOT / "evals" / "reports" / f"{result_output_path.stem}-failures.md"
+
+
+def maybe_write_failure_report(
+    report: EvalRunReport,
+    result_output_path: Path,
+    requested_output: str | None,
+    disabled: bool,
+    print_report: bool,
+) -> Path | None:
+    if disabled:
+        return None
+
+    should_generate = (
+        has_eval_failures(report)
+        or requested_output is not None
+        or print_report
+    )
+
+    if not should_generate:
+        return None
+
+    markdown = render_failure_report(report, source_path=str(result_output_path))
+
+    output_path = resolve_failure_report_path(
+        requested_output=requested_output,
+        result_output_path=result_output_path,
+    )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(markdown, encoding="utf-8")
+
+    if print_report:
+        print()
+        print(markdown)
+
+    return output_path
+
+
 def main() -> int:
     args = parse_args()
 
@@ -515,6 +589,14 @@ def main() -> int:
         report.model_dump_json(indent=2),
         encoding="utf-8",
     )
+    
+    failure_report_path = maybe_write_failure_report(
+        report=report,
+        result_output_path=output_path,
+        requested_output=args.failure_report_output,
+        disabled=args.no_failure_report,
+        print_report=args.print_failure_report,
+    )
 
     print("Evaluation Summary")
     print("------------------")
@@ -524,6 +606,13 @@ def main() -> int:
     print(f"Errors:        {error_cases}")
     print(f"Pass rate:     {pass_rate:.1%}")
     print(f"Average score: " f"{average_score:.2f}")
+    
+    if failure_report_path is not None:
+        print(f"Failure report: {failure_report_path}")
+    elif has_eval_failures(report):
+        print("Failure report: disabled")
+    else:
+        print("Failure report: not generated because all selected cases passed")
     
     if judge_count:
         print(f"Judge cases:   {judge_count}")

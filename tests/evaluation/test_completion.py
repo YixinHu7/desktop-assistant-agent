@@ -175,6 +175,52 @@ class TaskCompletionTests(unittest.TestCase):
             assessment.status,
             CompletionStatus.COMPLETE,
         )
+    
+    def test_policy_error_is_failed_even_after_recovery_success(self):
+        case = build_case(
+            "completion_policy_error",
+            {
+                "required_tools": ["read_file"],
+                "completion_status": "failed",
+            },
+        )
+
+        snapshot = RuntimeEvalSnapshot.from_run_summary(
+            {
+                "route_decision": {"route": "tool"},
+                "tool_use_decision": {"should_use_tools": True},
+                "tool_calls": [
+                    {
+                        "tool": "read_file",
+                        "arguments": {"path": "../secrets.txt"},
+                        "status": "failed",
+                        "result": {
+                            "ok": False,
+                            "metadata": {
+                                "policy_error": True,
+                            },
+                        },
+                    },
+                    {
+                        "tool": "list_files",
+                        "arguments": {"path": "."},
+                        "status": "completed",
+                        "result": {
+                            "ok": True,
+                            "data": {
+                                "path": ".",
+                                "entries": [],
+                            },
+                        },
+                    },
+                ],
+                "final_answer": "I could not access that path.",
+            }
+        )
+
+        assessment = assess_task_completion(case, snapshot)
+
+        self.assertEqual(assessment.status, CompletionStatus.FAILED)
 
 
 if __name__ == "__main__":
