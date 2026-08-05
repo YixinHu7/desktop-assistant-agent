@@ -23,6 +23,7 @@ help:
 	@echo "  make clean-notes           Remove generated notes"
 	@echo "  make clean-memory          Remove memory file"
 	@echo "  make reset-data            Reset data directory"
+	@echo "  make eval-baseline NAME=name"
 
 .PHONY: run
 run:
@@ -124,3 +125,13 @@ reset-data:
 	mkdir -p data/notes
 	touch data/.gitkeep
 	touch data/notes/.gitkeep
+
+.PHONY: eval-baseline
+eval-baseline:
+	@test -n "$(NAME)" || (echo "Usage: make eval-baseline NAME=baseline_name" && exit 1)
+	$(PYTHON) scripts/create_eval_baseline.py --latest --name $(NAME)
+
+.PHONY: eval-baseline-print
+eval-baseline-print:
+	@test -n "$(NAME)" || (echo "Usage: make eval-baseline-print NAME=baseline_name" && exit 1)
+	$(PYTHON) scripts/create_eval_baseline.py --latest --name $(NAME) --print

@@ -59,6 +59,14 @@ from app.evaluation.failure_analysis import (
     load_eval_report,
     render_failure_report,
 )
+from app.evaluation.baseline import (
+    EvalBaseline,
+    create_eval_baseline,
+    create_latest_eval_baseline,
+    default_baseline_name,
+    normalize_baseline_name,
+    render_baseline_summary,
+)
 
 __all__ = [
     "AnswerExpectation",
@@ -106,4 +114,10 @@ __all__ = [
     "find_latest_eval_result",
     "load_eval_report",
     "render_failure_report",
+    "EvalBaseline",
+    "create_eval_baseline",
+    "create_latest_eval_baseline",
+    "default_baseline_name",
+    "normalize_baseline_name",
+    "render_baseline_summary",
 ]
