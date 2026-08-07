@@ -67,6 +67,16 @@ from app.evaluation.baseline import (
     normalize_baseline_name,
     render_baseline_summary,
 )
+from app.evaluation.comparison import (
+    CaseScoreChange,
+    CaseStatusChange,
+    EvalReportComparison,
+    compare_eval_report_files,
+    compare_eval_reports,
+    compare_latest_to_baseline,
+    has_regressions,
+    render_comparison_report,
+)
 
 __all__ = [
     "AnswerExpectation",
@@ -120,4 +130,12 @@ __all__ = [
     "default_baseline_name",
     "normalize_baseline_name",
     "render_baseline_summary",
+    "CaseScoreChange",
+    "CaseStatusChange",
+    "EvalReportComparison",
+    "compare_eval_report_files",
+    "compare_eval_reports",
+    "compare_latest_to_baseline",
+    "has_regressions",
+    "render_comparison_report",
 ]
