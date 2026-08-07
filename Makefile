@@ -24,6 +24,8 @@ help:
 	@echo "  make clean-memory          Remove memory file"
 	@echo "  make reset-data            Reset data directory"
 	@echo "  make eval-baseline NAME=name"
+	@echo "  make eval-compare BASELINE=path"
+	@echo "  make eval-compare-print BASELINE=path"
 
 .PHONY: run
 run:
@@ -135,3 +137,18 @@ eval-baseline:
 eval-baseline-print:
 	@test -n "$(NAME)" || (echo "Usage: make eval-baseline-print NAME=baseline_name" && exit 1)
 	$(PYTHON) scripts/create_eval_baseline.py --latest --name $(NAME) --print
+
+.PHONY: eval-compare
+eval-compare:
+	@test -n "$(BASELINE)" || (echo "Usage: make eval-compare BASELINE=path/to/baseline.json" && exit 1)
+	$(PYTHON) scripts/compare_eval_reports.py --baseline $(BASELINE) --latest
+
+.PHONY: eval-compare-print
+eval-compare-print:
+	@test -n "$(BASELINE)" || (echo "Usage: make eval-compare-print BASELINE=path/to/baseline.json" && exit 1)
+	$(PYTHON) scripts/compare_eval_reports.py --baseline $(BASELINE) --latest --print
+
+.PHONY: eval-compare-strict
+eval-compare-strict:
+	@test -n "$(BASELINE)" || (echo "Usage: make eval-compare-strict BASELINE=path/to/baseline.json" && exit 1)
+	$(PYTHON) scripts/compare_eval_reports.py --baseline $(BASELINE) --latest --fail-on-regression
