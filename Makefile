@@ -26,6 +26,7 @@ help:
 	@echo "  make eval-baseline NAME=name"
 	@echo "  make eval-compare BASELINE=path"
 	@echo "  make eval-compare-print BASELINE=path"
+	@echo "  make eval-mcp              Run MCP eval suite"
 
 .PHONY: run
 run:
@@ -103,7 +104,8 @@ check:
 		scripts/validate_evals.py \
 		scripts/run_evals.py \
 		scripts/eval_worker.py \
-		scripts/analyze_eval_failures.py
+		scripts/analyze_eval_failures.py \
+		app/tools/mock_mcp_tools.py
 	$(PYTHON) scripts/validate_evals.py
 	$(PYTHON) -m unittest discover -s tests/evaluation -v
 
@@ -152,3 +154,6 @@ eval-compare-print:
 eval-compare-strict:
 	@test -n "$(BASELINE)" || (echo "Usage: make eval-compare-strict BASELINE=path/to/baseline.json" && exit 1)
 	$(PYTHON) scripts/compare_eval_reports.py --baseline $(BASELINE) --latest --fail-on-regression
+.PHONY: eval-mcp
+eval-mcp:
+	$(PYTHON) scripts/run_evals.py --suite mcp

@@ -28,6 +28,7 @@ class EvalSuite(str, Enum):
     RECOVERY = "recovery"
     SAFETY = "safety"
     REGRESSION = "regression"
+    MCP = "mcp"
     END_TO_END = "end_to_end"
 
 
