@@ -11,6 +11,11 @@ from app.tools.system_tools import (
     read_multiple_files,
 )
 from app.config import config
+from app.tools.mock_mcp_tools import (
+    mcp_list_resources,
+    mcp_read_ticket,
+    mcp_search_docs,
+)
 
 
 def build_tool_definitions(memory_store):
@@ -230,6 +235,94 @@ def build_tool_definitions(memory_store):
             function=open_app,
             requires_approval=True,
             source="local",
+        )
+    
+    if config.enable_mcp_tools and config.enable_mock_mcp_tools:
+        tools["mcp_search_docs"] = ToolDefinition(
+            name="mcp_search_docs",
+            schema={
+                "type": "function",
+                "name": "mcp_search_docs",
+                "description": (
+                    "Search deterministic mock MCP documentation resources. "
+                    "Use this when the user asks to search MCP docs, agent runtime docs, "
+                    "evaluation docs, or MCP integration notes."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query for mock MCP docs.",
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Maximum number of documents to return.",
+                        },
+                    },
+                    "required": ["query", "max_results"],
+                    "additionalProperties": False,
+                },
+                "strict": True,
+            },
+            function=mcp_search_docs,
+            requires_approval=False,
+            source="mock_mcp",
+        )
+
+        tools["mcp_read_ticket"] = ToolDefinition(
+            name="mcp_read_ticket",
+            schema={
+                "type": "function",
+                "name": "mcp_read_ticket",
+                "description": (
+                    "Read a deterministic mock MCP ticket by ticket id. "
+                    "Use this when the user asks about a ticket such as TICKET-123."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ticket_id": {
+                            "type": "string",
+                            "description": "Ticket id, for example TICKET-123.",
+                        }
+                    },
+                    "required": ["ticket_id"],
+                    "additionalProperties": False,
+                },
+                "strict": True,
+            },
+            function=mcp_read_ticket,
+            requires_approval=False,
+            source="mock_mcp",
+        )
+
+        tools["mcp_list_resources"] = ToolDefinition(
+            name="mcp_list_resources",
+            schema={
+                "type": "function",
+                "name": "mcp_list_resources",
+                "description": (
+                    "List deterministic mock MCP resources. "
+                    "Use this when the user asks what MCP docs or tickets are available."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "resource_type": {
+                            "type": "string",
+                            "enum": ["all", "docs", "tickets"],
+                            "description": "Resource category to list.",
+                        }
+                    },
+                    "required": ["resource_type"],
+                    "additionalProperties": False,
+                },
+                "strict": True,
+            },
+            function=mcp_list_resources,
+            requires_approval=False,
+            source="mock_mcp",
         )
         
     return tools
