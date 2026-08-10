@@ -11,6 +11,24 @@ from app.tools.system_tools import (
     read_multiple_files,
 )
 from app.config import config
+from app.mcp.mock_provider import MockMCPProvider
+
+
+def _build_function_schema(name: str, description: str, parameters: dict) -> dict:
+    return {
+        "type": "function",
+        "name": name,
+        "description": description,
+        "parameters": parameters,
+        "strict": True,
+    }
+
+
+def _make_provider_tool_function(provider, tool_name: str):
+    def call_tool(**kwargs):
+        return provider.call_tool(tool_name, kwargs)
+
+    return call_tool
 
 
 def build_tool_definitions(memory_store):
@@ -231,6 +249,37 @@ def build_tool_definitions(memory_store):
             requires_approval=True,
             source="local",
         )
+    
+    if config.enable_mcp_tools and config.enable_mock_mcp_tools:
+        provider = MockMCPProvider()
+
+        for spec in provider.list_tool_specs():
+            permission = permissions.get(
+                spec.name,
+                {
+                    "enabled": True,
+                    "requires_approval": spec.requires_approval,
+                    "risk_level": spec.risk_level,
+                    "reason": spec.permission_reason,
+                },
+            )
+
+            if not permission["enabled"]:
+                continue
+
+            tools[spec.name] = ToolDefinition(
+                name=spec.name,
+                schema=_build_function_schema(
+                    name=spec.name,
+                    description=spec.description,
+                    parameters=spec.parameters,
+                ),
+                function=_make_provider_tool_function(provider, spec.name),
+                requires_approval=permission["requires_approval"],
+                risk_level=permission["risk_level"],
+                permission_reason=permission["reason"],
+                source=provider.provider_name,
+            )
         
     return tools
     

@@ -40,6 +40,11 @@ class AppConfig:
     enable_llm_judge: bool = os.getenv("ENABLE_LLM_JUDGE", "false").lower() == "true"
     judge_model: str = os.getenv("JUDGE_MODEL", os.getenv("OPENAI_MODEL", "gpt-4.1-mini"))
     judge_weight: float = float(os.getenv("JUDGE_WEIGHT", "0.25"))
+    
+    enable_mcp_tools: bool = os.getenv("ENABLE_MCP_TOOLS", "false").lower() == "true"
+    enable_mock_mcp_tools: bool = (
+        os.getenv("ENABLE_MOCK_MCP_TOOLS", "false").lower() == "true"
+    )
 
     def tool_permissions(self):
         return {
@@ -96,6 +101,24 @@ class AppConfig:
                 "requires_approval": False,
                 "risk_level": "low",
                 "reason": "Reading multiple local project files is allowed in this local assistant context.",
+            },
+            "mcp_search_docs": {
+                "enabled": self.enable_mcp_tools and self.enable_mock_mcp_tools,
+                "requires_approval": False,
+                "risk_level": "low",
+                "reason": "Read-only mock MCP documentation search.",
+            },
+            "mcp_read_ticket": {
+                "enabled": self.enable_mcp_tools and self.enable_mock_mcp_tools,
+                "requires_approval": False,
+                "risk_level": "low",
+                "reason": "Read-only mock MCP ticket lookup.",
+            },
+            "mcp_list_resources": {
+                "enabled": self.enable_mcp_tools and self.enable_mock_mcp_tools,
+                "requires_approval": False,
+                "risk_level": "low",
+                "reason": "Read-only mock MCP resource listing.",
             },
         }
         
