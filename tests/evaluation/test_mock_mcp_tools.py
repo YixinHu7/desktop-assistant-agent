@@ -16,7 +16,7 @@ class MockMCPToolsTests(unittest.TestCase):
             enable_mock_mcp_tools=True,
         )
 
-        with patch("app.tools.mock_mcp_tools.config", test_config):
+        with patch("app.mcp.mock_provider.config", test_config):
             result = mcp_search_docs("agent runtime architecture")
 
         self.assertTrue(result["ok"])
@@ -28,7 +28,7 @@ class MockMCPToolsTests(unittest.TestCase):
             enable_mock_mcp_tools=True,
         )
 
-        with patch("app.tools.mock_mcp_tools.config", test_config):
+        with patch("app.mcp.mock_provider.config", test_config):
             result = mcp_read_ticket("TICKET-123")
 
         self.assertTrue(result["ok"])
@@ -40,7 +40,7 @@ class MockMCPToolsTests(unittest.TestCase):
             enable_mock_mcp_tools=True,
         )
 
-        with patch("app.tools.mock_mcp_tools.config", test_config):
+        with patch("app.mcp.mock_provider.config", test_config):
             result = mcp_read_ticket("TICKET-999")
 
         self.assertFalse(result["ok"])
@@ -53,7 +53,7 @@ class MockMCPToolsTests(unittest.TestCase):
             enable_mock_mcp_tools=True,
         )
 
-        with patch("app.tools.mock_mcp_tools.config", test_config):
+        with patch("app.mcp.mock_provider.config", test_config):
             result = mcp_list_resources()
 
         self.assertFalse(result["ok"])
