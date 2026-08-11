@@ -11,7 +11,7 @@ from app.tools.system_tools import (
     read_multiple_files,
 )
 from app.config import config
-from app.mcp.mock_provider import MockMCPProvider
+from app.mcp.factory import build_mcp_providers
 
 
 def _build_function_schema(name: str, description: str, parameters: dict) -> dict:
@@ -250,9 +250,7 @@ def build_tool_definitions(memory_store):
             source="local",
         )
     
-    if config.enable_mcp_tools and config.enable_mock_mcp_tools:
-        provider = MockMCPProvider()
-
+    for provider in build_mcp_providers():
         for spec in provider.list_tool_specs():
             permission = permissions.get(
                 spec.name,

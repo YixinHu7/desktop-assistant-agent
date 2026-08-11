@@ -45,6 +45,11 @@ class AppConfig:
     enable_mock_mcp_tools: bool = (
         os.getenv("ENABLE_MOCK_MCP_TOOLS", "false").lower() == "true"
     )
+    
+    enable_real_mcp_tools: bool = (
+        os.getenv("ENABLE_REAL_MCP_TOOLS", "false").lower() == "true"
+    )
+    mcp_server_config_path: str = os.getenv("MCP_SERVER_CONFIG_PATH", "config/mcp_servers.json")
 
     def tool_permissions(self):
         return {
