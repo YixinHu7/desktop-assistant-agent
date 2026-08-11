@@ -1,0 +1,11 @@
+{
+    "servers": [
+      {
+        "name": "example-filesystem",
+        "command": "python",
+        "args": ["-m", "example_mcp_server"],
+        "env": {},
+        "enabled": false
+      }
+    ]
+  }
