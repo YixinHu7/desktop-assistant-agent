@@ -18,3 +18,5 @@ evals/results/*
 
 evals/reports/*
 !evals/reports/.gitkeep
+
+config/mcp_servers.json
