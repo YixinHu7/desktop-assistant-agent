@@ -1,11 +1,11 @@
 {
-    "servers": [
-      {
-        "name": "example-filesystem",
-        "command": "python",
-        "args": ["-m", "example_mcp_server"],
-        "env": {},
-        "enabled": false
-      }
-    ]
-  }
+  "servers": [
+    {
+      "name": "tiny",
+      "command": "python",
+      "args": ["tests/fixtures/mcp_servers/tiny_mcp_server.py"],
+      "env": {},
+      "enabled": false
+    }
+  ]
+}
