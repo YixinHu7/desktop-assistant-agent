@@ -5,7 +5,20 @@
       "command": "python",
       "args": ["tests/fixtures/mcp_servers/tiny_mcp_server.py"],
       "env": {},
-      "enabled": false
+      "enabled": false,
+      "allowed_tools": ["echo", "get_status"],
+      "tool_policies": {
+        "echo": {
+          "requires_approval": false,
+          "risk_level": "low",
+          "reason": "Read-only tiny test echo tool."
+        },
+        "get_status": {
+          "requires_approval": false,
+          "risk_level": "low",
+          "reason": "Read-only tiny test status tool."
+        }
+      }
     }
   ]
 }

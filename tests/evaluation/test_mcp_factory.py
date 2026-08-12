@@ -49,7 +49,15 @@ class MCPFactoryTests(unittest.TestCase):
                       "name": "example",
                       "command": "python",
                       "args": ["server.py"],
-                      "enabled": true
+                      "enabled": true,
+                      "allowed_tools": ["echo"],
+                      "tool_policies": {
+                        "echo": {
+                        "requires_approval": false,
+                        "risk_level": "low",
+                        "reason": "Read-only test tool."
+                        }
+                      }
                     }
                   ]
                 }
@@ -70,6 +78,9 @@ class MCPFactoryTests(unittest.TestCase):
         self.assertEqual(len(providers), 1)
         self.assertIsInstance(providers[0], RealMCPProvider)
         self.assertEqual(providers[0].server_config.name, "example")
+        self.assertEqual(providers[0].server_config.allowed_tools, ["echo"])
+        self.assertFalse(providers[0].server_config.tool_policies["echo"].requires_approval)
+        self.assertEqual(providers[0].server_config.tool_policies["echo"].risk_level, "low")
 
     def test_load_mcp_server_configs_accepts_missing_file(self):
         configs = load_mcp_server_configs("definitely_missing_mcp_config.json")
