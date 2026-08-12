@@ -1,6 +1,17 @@
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
+
+
+RiskLevel = Literal["low", "medium", "high"]
+
+
+@dataclass(frozen=True)
+class MCPToolPolicy:
+    requires_approval: bool = True
+    risk_level: RiskLevel = "high"
+    reason: str = "Real MCP tool requires approval by default."
 
 
 @dataclass(frozen=True)
@@ -10,6 +21,8 @@ class MCPServerConfig:
     args: list[str] = field(default_factory=list)
     env: dict[str, str] = field(default_factory=dict)
     enabled: bool = True
+    allowed_tools: list[str] = field(default_factory=list)
+    tool_policies: dict[str, MCPToolPolicy] = field(default_factory=dict)
 
 
 def load_mcp_server_configs(path: str | Path) -> list[MCPServerConfig]:
@@ -33,6 +46,20 @@ def load_mcp_server_configs(path: str | Path) -> list[MCPServerConfig]:
         if not isinstance(item, dict):
             raise ValueError("Each MCP server config must be an object.")
 
+        tool_policies = {
+            str(tool_name): MCPToolPolicy(
+                requires_approval=bool(policy.get("requires_approval", True)),
+                risk_level=policy.get("risk_level", "high"),
+                reason=str(
+                    policy.get(
+                        "reason",
+                        "Real MCP tool requires approval by default.",
+                    )
+                ),
+            )
+            for tool_name, policy in item.get("tool_policies", {}).items()
+        }
+
         configs.append(
             MCPServerConfig(
                 name=str(item["name"]),
@@ -40,6 +67,8 @@ def load_mcp_server_configs(path: str | Path) -> list[MCPServerConfig]:
                 args=[str(arg) for arg in item.get("args", [])],
                 env={str(key): str(value) for key, value in item.get("env", {}).items()},
                 enabled=bool(item.get("enabled", True)),
+                allowed_tools=[str(name) for name in item.get("allowed_tools", [])],
+                tool_policies=tool_policies,
             )
         )
 
