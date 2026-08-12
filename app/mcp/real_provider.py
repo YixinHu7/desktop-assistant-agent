@@ -46,8 +46,13 @@ class RealMCPProvider(MCPProvider):
 
         for tool in tools_response.tools:
             original_name = str(tool.name)
+            
+            if not self._is_tool_allowed(original_name):
+                continue
+            
             exposed_name = self._exposed_tool_name(original_name)
             self._tool_name_map[exposed_name] = original_name
+            tool_policy = self._tool_policy_for(original_name)
 
             input_schema = getattr(tool, "inputSchema", None) or getattr(
                 tool,
@@ -67,11 +72,17 @@ class RealMCPProvider(MCPProvider):
                         "required": [],
                         "additionalProperties": False,
                     },
-                    requires_approval=True,
-                    risk_level="high",
+                    requires_approval=(
+                        tool_policy.requires_approval if tool_policy else True
+                    ),
+                    risk_level=tool_policy.risk_level if tool_policy else "high",
                     permission_reason=(
-                        "Real MCP tools require approval by default because "
-                        "external server tools may read private data or create side effects."
+                        tool_policy.reason
+                        if tool_policy
+                        else (
+                            "Real MCP tool requires approval by default because "
+                            "no explicit tool policy was configured."
+                        )
                     ),
                 )
             )
@@ -184,6 +195,12 @@ class RealMCPProvider(MCPProvider):
             "content": [_object_to_data(item) for item in content],
             "raw": _object_to_data(result),
         }
+    
+    def _is_tool_allowed(self, original_name: str) -> bool:
+        return original_name in set(self.server_config.allowed_tools)
+
+    def _tool_policy_for(self, original_name: str):
+        return self.server_config.tool_policies.get(original_name)
 
 
 class _MCPStdioSession:
