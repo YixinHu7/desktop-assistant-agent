@@ -111,6 +111,8 @@ check:
 		app/mcp/real_provider.py \
 		app/mcp/server_config.py \
 		app/mcp/factory.py \
+		app/mcp/diagnostics.py \
+		scripts/mcp_discover.py \
 	$(PYTHON) scripts/validate_evals.py
 	$(PYTHON) -m unittest discover -s tests/evaluation -v
 

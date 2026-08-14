@@ -9,6 +9,7 @@ from mcp.client.stdio import stdio_client
 from app.mcp.provider import MCPProvider, MCPToolSpec
 from app.mcp.server_config import MCPServerConfig
 from app.tools.results import tool_error, tool_success
+from app.mcp.diagnostics import MCPDiscoveryDiagnostics
 
 
 class RealMCPProvider(MCPProvider):
@@ -16,11 +17,27 @@ class RealMCPProvider(MCPProvider):
         self.server_config = server_config
         self.provider_name = f"mcp:{server_config.name}"
         self._tool_name_map: dict[str, str] = {}
+        self.last_discovery_diagnostics = MCPDiscoveryDiagnostics(
+            provider_name=self.provider_name,
+            server_name=self.server_config.name,
+            allowed_tools=list(self.server_config.allowed_tools),
+        )
+    
+    def discovery_diagnostics(self) -> dict:
+        return self.last_discovery_diagnostics.to_dict()
 
     def list_tool_specs(self) -> list[MCPToolSpec]:
         try:
             return asyncio.run(self._list_tool_specs_async())
         except Exception as exc:
+            self.last_discovery_diagnostics = MCPDiscoveryDiagnostics(
+                provider_name=self.provider_name,
+                server_name=self.server_config.name,
+                status="error",
+                allowed_tools=list(self.server_config.allowed_tools),
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+            )
             return []
 
     def call_tool(self, tool_name: str, arguments: dict[str, Any]):
@@ -41,13 +58,19 @@ class RealMCPProvider(MCPProvider):
     async def _list_tool_specs_async(self) -> list[MCPToolSpec]:
         async with self._open_session() as session:
             tools_response = await session.list_tools()
-
+        
+        self._tool_name_map.clear()
+        
+        raw_tools = list(tools_response.tools)
+        discovered_tools = [str(tool.name) for tool in raw_tools]
+        filtered_tools = []
         specs = []
 
         for tool in tools_response.tools:
             original_name = str(tool.name)
             
             if not self._is_tool_allowed(original_name):
+                filtered_tools.append(original_name)
                 continue
             
             exposed_name = self._exposed_tool_name(original_name)
@@ -86,6 +109,17 @@ class RealMCPProvider(MCPProvider):
                     ),
                 )
             )
+            
+        self.last_discovery_diagnostics = MCPDiscoveryDiagnostics(
+            provider_name=self.provider_name,
+            server_name=self.server_config.name,
+            status="ok",
+            total_tools=len(raw_tools),
+            allowed_tools=list(self.server_config.allowed_tools),
+            discovered_tools=discovered_tools,
+            registered_tools=[spec.name for spec in specs],
+            filtered_tools=filtered_tools,
+        )
 
         return specs
 
