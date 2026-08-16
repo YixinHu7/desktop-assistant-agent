@@ -40,7 +40,7 @@ class DesktopAssistantAgent:
         self.replanner = Replanner(self.client)
         self.recovery = ToolRecoveryManager()
         self.memory_policy = MemoryPolicy(self.client)
-        self.approval_policy = ApprovalPolicy()
+        self.approval_policy = ApprovalPolicy(self.tool_definitions)
         self.tool_use_policy = ToolUsePolicy(self.client)
         self.skill_registry = SkillRegistry(config.skills_dir) if config.enable_skills else None
         self.skill_selector = (
