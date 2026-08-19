@@ -19,6 +19,7 @@ from app.run_context import RunContext
 from app.metrics import compute_run_metrics
 from app.config import config
 from app.skills import SkillRegistry, SkillSelector
+from app.mcp.telemetry import build_mcp_telemetry
 
 
 class DesktopAssistantAgent:
@@ -97,6 +98,49 @@ class DesktopAssistantAgent:
         )
 
         return final_answer
+    
+    
+    def _build_tool_call_payload(
+        self,
+        tool_name: str,
+        arguments: dict,
+        kind: str,
+        status: str,
+        result: dict,
+        recovery_for: str | None = None,
+    ) -> dict:
+        tool_definition = self.tool_definitions.get(tool_name)
+        result_metadata = result.get("metadata", {}) if isinstance(result, dict) else {}
+
+        source = getattr(tool_definition, "source", None)
+        mcp_telemetry = build_mcp_telemetry(
+            tool_name=tool_name,
+            tool_source=source,
+            result_metadata=result_metadata,
+        )
+
+        payload = {
+            "tool": tool_name,
+            "tool_name": tool_name,
+            "arguments": arguments,
+            "kind": kind,
+            "status": status,
+            "ok": result.get("ok", False) if isinstance(result, dict) else False,
+            "source": source,
+            "requires_approval": getattr(tool_definition, "requires_approval", None),
+            "risk_level": getattr(tool_definition, "risk_level", None),
+            "permission_reason": getattr(tool_definition, "permission_reason", None),
+            "metadata": result_metadata,
+            "result": result,
+        }
+
+        if recovery_for is not None:
+            payload["recovery_for"] = recovery_for
+
+        if mcp_telemetry is not None:
+            payload["mcp"] = mcp_telemetry
+
+        return payload
     
     
     def _run_execution_cycle(
@@ -243,13 +287,13 @@ class DesktopAssistantAgent:
                         else "failed"
                     )
                 
-                tool_call_payload = {
-                    "tool": call.name,
-                    "arguments": arguments,
-                    "kind": "primary",
-                    "status": tool_status,
-                    "result": result,
-                }
+                tool_call_payload = self._build_tool_call_payload(
+                    tool_name=call.name,
+                    arguments=arguments,
+                    kind="primary",
+                    status=tool_status,
+                    result=result,
+                )
                 
                 if run is not None:
                     run.tool_calls.append(tool_call_payload)
@@ -331,14 +375,14 @@ class DesktopAssistantAgent:
                     # Recovery tool calls must also be included in used_tools.
                     used_tools.append(retry_tool)
 
-                    recovery_tool_call_payload = {
-                        "tool": retry_tool,
-                        "arguments": retry_arguments,
-                        "kind": "recovery",
-                        "recovery_for": call.name,
-                        "status": retry_status,
-                        "result": retry_result,
-                    }
+                    recovery_tool_call_payload = self._build_tool_call_payload(
+                        tool_name=retry_tool,
+                        arguments=retry_arguments,
+                        kind="recovery",
+                        status=retry_status,
+                        result=retry_result,
+                        recovery_for=call.name,
+                    )
                     
                     if run is not None:
                         run.tool_calls.append(

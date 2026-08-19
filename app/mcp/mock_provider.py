@@ -141,6 +141,8 @@ class MockMCPProvider(MCPProvider):
                 metadata={
                     "tool": tool_name,
                     "provider": self.provider_name,
+                    "original_tool": tool_name,
+                    "exposed_tool": tool_name,
                     "mock_mcp_disabled": True,
                 },
             )
@@ -162,6 +164,8 @@ class MockMCPProvider(MCPProvider):
             metadata={
                 "tool": tool_name,
                 "provider": self.provider_name,
+                "original_tool": tool_name,
+                "exposed_tool": tool_name,
             },
         )
 
@@ -186,6 +190,8 @@ class MockMCPProvider(MCPProvider):
             metadata={
                 "tool": "mcp_search_docs",
                 "provider": self.provider_name,
+                "original_tool": "mcp_search_docs",
+                "exposed_tool": "mcp_search_docs",
                 "eval_mode": config.eval_mode,
             },
         )
@@ -208,6 +214,8 @@ class MockMCPProvider(MCPProvider):
             metadata={
                 "tool": "mcp_read_ticket",
                 "provider": self.provider_name,
+                "original_tool": "mcp_read_ticket",
+                "exposed_tool": "mcp_read_ticket",
                 "ticket_id": ticket_id,
                 "eval_mode": config.eval_mode,
             },
@@ -247,6 +255,8 @@ class MockMCPProvider(MCPProvider):
             metadata={
                 "tool": "mcp_list_resources",
                 "provider": self.provider_name,
+                "original_tool": "mcp_list_resources",
+                "exposed_tool": "mcp_list_resources",
                 "eval_mode": config.eval_mode,
             },
         )
