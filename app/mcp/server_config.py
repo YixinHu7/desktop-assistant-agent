@@ -23,6 +23,8 @@ class MCPServerConfig:
     enabled: bool = True
     allowed_tools: list[str] = field(default_factory=list)
     tool_policies: dict[str, MCPToolPolicy] = field(default_factory=dict)
+    list_timeout_seconds: float = 5.0
+    call_timeout_seconds: float = 10.0
 
 
 def load_mcp_server_configs(path: str | Path) -> list[MCPServerConfig]:
@@ -69,6 +71,8 @@ def load_mcp_server_configs(path: str | Path) -> list[MCPServerConfig]:
                 enabled=bool(item.get("enabled", True)),
                 allowed_tools=[str(name) for name in item.get("allowed_tools", [])],
                 tool_policies=tool_policies,
+                list_timeout_seconds=float(item.get("list_timeout_seconds", 5.0)),
+                call_timeout_seconds=float(item.get("call_timeout_seconds", 10.0)),
             )
         )
 

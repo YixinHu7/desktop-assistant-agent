@@ -28,7 +28,12 @@ class RealMCPProvider(MCPProvider):
 
     def list_tool_specs(self) -> list[MCPToolSpec]:
         try:
-            return asyncio.run(self._list_tool_specs_async())
+            return asyncio.run(
+                asyncio.wait_for(
+                    self._list_tool_specs_async(),
+                    timeout=self.server_config.list_timeout_seconds,
+                )
+            )
         except Exception as exc:
             self.last_discovery_diagnostics = MCPDiscoveryDiagnostics(
                 provider_name=self.provider_name,
@@ -36,20 +41,25 @@ class RealMCPProvider(MCPProvider):
                 status="error",
                 allowed_tools=list(self.server_config.allowed_tools),
                 error_type=type(exc).__name__,
-                error_message=str(exc),
+                error_message=str(exc) or "MCP tool listing timed out or failed.",
             )
             return []
 
     def call_tool(self, tool_name: str, arguments: dict[str, Any]):
         try:
-            return asyncio.run(self._call_tool_async(tool_name, arguments))
+            return asyncio.run(
+                asyncio.wait_for(
+                    self._call_tool_async(tool_name, arguments),
+                    timeout=self.server_config.call_timeout_seconds,
+                )
+            )
         except Exception as exc:
             original_name = self._tool_name_map.get(tool_name) or (
                 self._original_name_from_exposed_name(tool_name)
             )
 
             return tool_error(
-                message=str(exc),
+                message=str(exc) or "MCP tool execution timed out or failed.",
                 metadata={
                     "tool": tool_name,
                     "exposed_tool": tool_name,
