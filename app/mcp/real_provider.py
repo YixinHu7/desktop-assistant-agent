@@ -44,10 +44,16 @@ class RealMCPProvider(MCPProvider):
         try:
             return asyncio.run(self._call_tool_async(tool_name, arguments))
         except Exception as exc:
+            original_name = self._tool_name_map.get(tool_name) or (
+                self._original_name_from_exposed_name(tool_name)
+            )
+
             return tool_error(
                 message=str(exc),
                 metadata={
                     "tool": tool_name,
+                    "exposed_tool": tool_name,
+                    "original_tool": original_name,
                     "provider": self.provider_name,
                     "server": self.server_config.name,
                     "real_mcp_error": True,
@@ -139,6 +145,7 @@ class RealMCPProvider(MCPProvider):
                 message=normalized_result["text"] or "MCP tool returned an error.",
                 metadata={
                     "tool": tool_name,
+                    "exposed_tool": tool_name,
                     "original_tool": original_name,
                     "provider": self.provider_name,
                     "server": self.server_config.name,
@@ -150,6 +157,7 @@ class RealMCPProvider(MCPProvider):
         return tool_success(
             data={
                 "tool": tool_name,
+                "exposed_tool": tool_name,
                 "original_tool": original_name,
                 "text": normalized_result["text"],
                 "structured_content": normalized_result["structured_content"],
@@ -157,6 +165,7 @@ class RealMCPProvider(MCPProvider):
             },
             metadata={
                 "tool": tool_name,
+                "exposed_tool": tool_name,
                 "original_tool": original_name,
                 "provider": self.provider_name,
                 "server": self.server_config.name,
