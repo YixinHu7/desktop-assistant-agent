@@ -2,6 +2,7 @@ from typing import Any
 
 from app.evaluation.models import (
     EvalCase,
+    MCPTelemetryExpectation,
     ToolArgumentExpectation,
 )
 from app.evaluation.results import (
@@ -15,6 +16,7 @@ from app.evaluation.snapshot import (
 )
 from app.evaluation.completion import assess_task_completion
 from app.evaluation.grounding import assess_answer_grounding
+
 
 def _passed(
     name: str,
@@ -86,8 +88,7 @@ def score_route(
     return _failed(
         name="route",
         message=(
-            f"Expected route '{expected_value}', "
-            f"but observed '{snapshot.route}'."
+            f"Expected route '{expected_value}', " f"but observed '{snapshot.route}'."
         ),
         details={
             "expected": expected_value,
@@ -100,15 +101,10 @@ def score_skill_selection(
     case: EvalCase,
     snapshot: RuntimeEvalSnapshot,
 ) -> EvalCheckResult:
-    expected_should_use = (
-        case.expected.should_use_skill
-    )
+    expected_should_use = case.expected.should_use_skill
     expected_skill = case.expected.skill
 
-    if (
-        expected_should_use is None
-        and expected_skill is None
-    ):
+    if expected_should_use is None and expected_skill is None:
         return _skipped(
             name="skill_selection",
             message="No skill expectation was defined.",
@@ -118,10 +114,7 @@ def score_skill_selection(
     failures: list[str] = []
 
     if expected_should_use is not None:
-        matched = (
-            snapshot.skill_used
-            == expected_should_use
-        )
+        matched = snapshot.skill_used == expected_should_use
         conditions.append(matched)
 
         if not matched:
@@ -132,10 +125,7 @@ def score_skill_selection(
             )
 
     if expected_skill is not None:
-        matched = (
-            snapshot.selected_skill
-            == expected_skill
-        )
+        matched = snapshot.selected_skill == expected_skill
         conditions.append(matched)
 
         if not matched:
@@ -144,11 +134,7 @@ def score_skill_selection(
                 f"observed '{snapshot.selected_skill}'."
             )
 
-    score = (
-        sum(conditions) / len(conditions)
-        if conditions
-        else 1.0
-    )
+    score = sum(conditions) / len(conditions) if conditions else 1.0
 
     details = {
         "expected_should_use_skill": expected_should_use,
@@ -178,12 +164,14 @@ def score_tool_selection(
 ) -> EvalCheckResult:
     expected = case.expected
 
-    has_expectation = any([
-        expected.required_tools,
-        expected.forbidden_tools,
-        expected.minimum_tool_calls is not None,
-        expected.maximum_tool_calls is not None,
-    ])
+    has_expectation = any(
+        [
+            expected.required_tools,
+            expected.forbidden_tools,
+            expected.minimum_tool_calls is not None,
+            expected.maximum_tool_calls is not None,
+        ]
+    )
 
     if not has_expectation:
         return _skipped(
@@ -191,48 +179,32 @@ def score_tool_selection(
             message="No tool selection expectation was defined.",
         )
 
-    actual_names = [
-        call.name
-        for call in snapshot.tool_calls
-    ]
+    actual_names = [call.name for call in snapshot.tool_calls]
     actual_name_set = set(actual_names)
 
     checks: list[bool] = []
     failures: list[str] = []
 
-    missing_required = sorted(
-        set(expected.required_tools)
-        - actual_name_set
-    )
+    missing_required = sorted(set(expected.required_tools) - actual_name_set)
 
     required_passed = not missing_required
     checks.append(required_passed)
 
     if missing_required:
-        failures.append(
-            f"Missing required tools: {missing_required}."
-        )
+        failures.append(f"Missing required tools: {missing_required}.")
 
-    used_forbidden = sorted(
-        set(expected.forbidden_tools)
-        & actual_name_set
-    )
+    used_forbidden = sorted(set(expected.forbidden_tools) & actual_name_set)
 
     forbidden_passed = not used_forbidden
     checks.append(forbidden_passed)
 
     if used_forbidden:
-        failures.append(
-            f"Forbidden tools were used: {used_forbidden}."
-        )
+        failures.append(f"Forbidden tools were used: {used_forbidden}.")
 
     tool_call_count = len(snapshot.tool_calls)
 
     if expected.minimum_tool_calls is not None:
-        minimum_passed = (
-            tool_call_count
-            >= expected.minimum_tool_calls
-        )
+        minimum_passed = tool_call_count >= expected.minimum_tool_calls
         checks.append(minimum_passed)
 
         if not minimum_passed:
@@ -243,10 +215,7 @@ def score_tool_selection(
             )
 
     if expected.maximum_tool_calls is not None:
-        maximum_passed = (
-            tool_call_count
-            <= expected.maximum_tool_calls
-        )
+        maximum_passed = tool_call_count <= expected.maximum_tool_calls
         checks.append(maximum_passed)
 
         if not maximum_passed:
@@ -256,11 +225,7 @@ def score_tool_selection(
                 f"observed {tool_call_count}."
             )
 
-    score = (
-        sum(checks) / len(checks)
-        if checks
-        else 1.0
-    )
+    score = sum(checks) / len(checks) if checks else 1.0
 
     details = {
         "required_tools": expected.required_tools,
@@ -303,16 +268,11 @@ def score_tool_arguments(
 
     for expectation in expectations:
         matching_calls = [
-            call
-            for call in snapshot.tool_calls
-            if call.name == expectation.tool
+            call for call in snapshot.tool_calls if call.name == expectation.tool
         ]
 
         if not matching_calls:
-            failures.append(
-                f"No call was recorded for tool "
-                f"'{expectation.tool}'."
-            )
+            failures.append(f"No call was recorded for tool " f"'{expectation.tool}'.")
             continue
 
         if any(
@@ -325,20 +285,13 @@ def score_tool_arguments(
             matched_expectations += 1
         else:
             failures.append(
-                f"No '{expectation.tool}' call matched "
-                f"the expected arguments."
+                f"No '{expectation.tool}' call matched " f"the expected arguments."
             )
 
-    score = (
-        matched_expectations
-        / len(expectations)
-    )
+    score = matched_expectations / len(expectations)
 
     details = {
-        "expected": [
-            expectation.model_dump()
-            for expectation in expectations
-        ],
+        "expected": [expectation.model_dump() for expectation in expectations],
         "actual": [
             {
                 "tool": call.name,
@@ -363,6 +316,101 @@ def score_tool_arguments(
         details=details,
         score=score,
     )
+
+
+def score_mcp_telemetry(
+    case: EvalCase,
+    snapshot: RuntimeEvalSnapshot,
+) -> EvalCheckResult:
+    expectations = case.expected.mcp
+
+    if not expectations:
+        return _skipped(
+            name="mcp_telemetry",
+            message="No MCP telemetry expectations were defined.",
+        )
+
+    matched_expectations = 0
+    failures: list[str] = []
+
+    for expectation in expectations:
+        matching_calls = [
+            call for call in snapshot.tool_calls if call.name == expectation.tool
+        ]
+
+        if not matching_calls:
+            failures.append(
+                f"No call was recorded for MCP tool " f"'{expectation.tool}'."
+            )
+            continue
+
+        if any(
+            _mcp_telemetry_matches(
+                expectation=expectation,
+                actual=call,
+            )
+            for call in matching_calls
+        ):
+            matched_expectations += 1
+        else:
+            failures.append(
+                f"No '{expectation.tool}' call matched the expected " "MCP telemetry."
+            )
+
+    score = matched_expectations / len(expectations)
+
+    details = {
+        "expected": [expectation.model_dump() for expectation in expectations],
+        "actual": [
+            {
+                "tool": call.name,
+                "mcp": getattr(call, "mcp", None),
+            }
+            for call in snapshot.tool_calls
+        ],
+        "matched_expectations": matched_expectations,
+        "total_expectations": len(expectations),
+    }
+
+    if matched_expectations == len(expectations):
+        return _passed(
+            name="mcp_telemetry",
+            message="All MCP telemetry expectations passed.",
+            details=details,
+        )
+
+    return _failed(
+        name="mcp_telemetry",
+        message=" ".join(failures),
+        details=details,
+        score=score,
+    )
+
+
+def _mcp_telemetry_matches(
+    expectation: MCPTelemetryExpectation,
+    actual: ObservedToolCall,
+) -> bool:
+    telemetry = getattr(actual, "mcp", None)
+
+    if not isinstance(telemetry, dict):
+        return False
+
+    expected_fields = {
+        "provider": expectation.provider,
+        "server": expectation.server,
+        "original_tool": expectation.original_tool,
+        "exposed_tool": expectation.exposed_tool,
+    }
+
+    for field_name, expected_value in expected_fields.items():
+        if expected_value is None:
+            continue
+
+        if telemetry.get(field_name) != expected_value:
+            return False
+
+    return True
 
 
 def _arguments_match(
@@ -408,9 +456,7 @@ def score_approval(
     case: EvalCase,
     snapshot: RuntimeEvalSnapshot,
 ) -> EvalCheckResult:
-    expected_tools = (
-        case.expected.approval_required_tools
-    )
+    expected_tools = case.expected.approval_required_tools
 
     if not expected_tools:
         return _skipped(
@@ -419,14 +465,10 @@ def score_approval(
         )
 
     approval_by_tool = {
-        approval.tool: approval.approved
-        for approval in snapshot.approvals
+        approval.tool: approval.approved for approval in snapshot.approvals
     }
 
-    executed_tools = {
-        call.name
-        for call in snapshot.tool_calls
-    }
+    executed_tools = {call.name for call in snapshot.tool_calls}
 
     checks: list[bool] = []
     failures: list[str] = []
@@ -434,20 +476,14 @@ def score_approval(
     for tool in expected_tools:
         if tool not in approval_by_tool:
             checks.append(False)
-            failures.append(
-                f"No approval decision was recorded "
-                f"for '{tool}'."
-            )
+            failures.append(f"No approval decision was recorded " f"for '{tool}'.")
             continue
 
         approved = approval_by_tool[tool]
 
         if tool in executed_tools and approved is not True:
             checks.append(False)
-            failures.append(
-                f"Tool '{tool}' executed without an "
-                f"approved decision."
-            )
+            failures.append(f"Tool '{tool}' executed without an " f"approved decision.")
             continue
 
         checks.append(True)
@@ -457,8 +493,7 @@ def score_approval(
     details = {
         "approval_required_tools": expected_tools,
         "observed_approvals": {
-            approval.tool: approval.approved
-            for approval in snapshot.approvals
+            approval.tool: approval.approved for approval in snapshot.approvals
         },
         "executed_tools": sorted(executed_tools),
     }
@@ -493,9 +528,7 @@ def score_recovery(
     if snapshot.recovery_occurred == expected:
         return _passed(
             name="recovery",
-            message=(
-                "Recovery behavior matched the expectation."
-            ),
+            message=("Recovery behavior matched the expectation."),
             details={
                 "expected": expected,
                 "actual": snapshot.recovery_occurred,
@@ -540,10 +573,7 @@ def score_task_completion(
     if assessment.status == expected_status:
         return _passed(
             name="task_completion",
-            message=(
-                "Task completion status matched: "
-                f"{assessment.status.value}."
-            ),
+            message=("Task completion status matched: " f"{assessment.status.value}."),
             details=details,
         )
 
@@ -616,9 +646,7 @@ def score_answer_requirements(
         matched_any = []
 
     present_excluded = [
-        phrase
-        for phrase in expectation.excludes
-        if phrase.lower() in normalized_answer
+        phrase for phrase in expectation.excludes if phrase.lower() in normalized_answer
     ]
 
     excludes_passed = not present_excluded
@@ -694,21 +722,20 @@ def score_answer_grounding(
         message=assessment.reason,
         details=details,
     )
-            
-    
+
+
 def score_eval_case(
     case: EvalCase,
     run_summary: dict[str, Any],
 ) -> EvalCaseResult:
-    snapshot = RuntimeEvalSnapshot.from_run_summary(
-        run_summary
-    )
+    snapshot = RuntimeEvalSnapshot.from_run_summary(run_summary)
 
     checks = [
         score_route(case, snapshot),
         score_skill_selection(case, snapshot),
         score_tool_selection(case, snapshot),
         score_tool_arguments(case, snapshot),
+        score_mcp_telemetry(case, snapshot),
         score_approval(case, snapshot),
         score_recovery(case, snapshot),
         score_task_completion(case, snapshot),
@@ -717,22 +744,16 @@ def score_eval_case(
     ]
 
     scored_checks = [
-        check
-        for check in checks
-        if check.status != EvalCheckStatus.SKIPPED
+        check for check in checks if check.status != EvalCheckStatus.SKIPPED
     ]
 
     overall_score = (
-        sum(check.score for check in scored_checks)
-        / len(scored_checks)
+        sum(check.score for check in scored_checks) / len(scored_checks)
         if scored_checks
         else 1.0
     )
 
-    passed = all(
-        check.status != EvalCheckStatus.FAILED
-        for check in checks
-    )
+    passed = all(check.status != EvalCheckStatus.FAILED for check in checks)
 
     return EvalCaseResult(
         case_id=case.id,

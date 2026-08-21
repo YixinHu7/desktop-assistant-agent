@@ -9,6 +9,7 @@ class ObservedToolCall:
     status: Optional[str] = None
     ok: Optional[bool] = None
     result: dict[str, Any] = field(default_factory=dict)
+    mcp: Optional[dict[str, Any]] = None
 
 
 @dataclass(frozen=True)
@@ -125,6 +126,9 @@ def _extract_tool_calls(run_summary: dict[str, Any]) -> list[ObservedToolCall]:
 
         ok = result.get("ok")
         ok = ok if isinstance(ok, bool) else None
+        
+        mcp = item.get("mcp")
+        mcp = mcp if isinstance(mcp, dict) else None
 
         calls.append(
             ObservedToolCall(
@@ -133,6 +137,7 @@ def _extract_tool_calls(run_summary: dict[str, Any]) -> list[ObservedToolCall]:
                 status=item.get("status"),
                 ok=ok,
                 result=result,
+                mcp=mcp,
             )
         )
 

@@ -57,6 +57,14 @@ class ToolArgumentExpectation(StrictEvalModel):
     match: Literal["subset", "exact"] = "subset"
 
 
+class MCPTelemetryExpectation(StrictEvalModel):
+    tool: str = Field(min_length=1)
+    provider: Optional[str] = None
+    server: Optional[str] = None
+    original_tool: Optional[str] = None
+    exposed_tool: Optional[str] = None
+    
+
 class GroundingExpectation(StrictEvalModel):
     required: bool = False
     require_successful_tool: bool = True
@@ -108,6 +116,8 @@ class EvalExpectedOutcome(StrictEvalModel):
     tool_arguments: list[ToolArgumentExpectation] = Field(
         default_factory=list
     )
+    
+    mcp: list[MCPTelemetryExpectation] = Field(default_factory=list)
 
     approval_required_tools: list[str] = Field(default_factory=list)
 
