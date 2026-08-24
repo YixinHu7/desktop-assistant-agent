@@ -102,6 +102,126 @@ class RealMCPProviderTests(unittest.TestCase):
 
         self.assertEqual(names, {"mcp_tiny_echo"})
         self.assertNotIn("mcp_tiny_get_status", names)
+    
+    def test_blocks_non_namespaced_original_tool_call(self):
+        provider = RealMCPProvider(
+            MCPServerConfig(
+                name="tiny",
+                command=sys.executable,
+                args=[str(self.server_path)],
+                enabled=True,
+                allowed_tools=["echo"],
+            )
+        )
+
+        result = provider.call_tool(
+            "echo",
+            {"message": "hello"},
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["metadata"]["error_type"], "MCPToolNotAllowed")
+        self.assertTrue(result["metadata"]["mcp_guardrail_blocked"])
+        self.assertEqual(result["metadata"]["provider"], "mcp:tiny")
+        self.assertEqual(result["metadata"]["server"], "tiny")
+        self.assertEqual(result["metadata"]["exposed_tool"], "echo")
+        self.assertEqual(result["metadata"]["original_tool"], "echo")
+
+    def test_blocks_namespaced_tool_not_in_allowlist(self):
+        provider = RealMCPProvider(
+            MCPServerConfig(
+                name="tiny",
+                command=sys.executable,
+                args=[str(self.server_path)],
+                enabled=True,
+                allowed_tools=["echo"],
+            )
+        )
+
+        result = provider.call_tool(
+            "mcp_tiny_get_status",
+            {},
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["metadata"]["error_type"], "MCPToolNotAllowed")
+        self.assertTrue(result["metadata"]["mcp_guardrail_blocked"])
+        self.assertEqual(result["metadata"]["provider"], "mcp:tiny")
+        self.assertEqual(result["metadata"]["server"], "tiny")
+        self.assertEqual(result["metadata"]["exposed_tool"], "mcp_tiny_get_status")
+        self.assertEqual(result["metadata"]["original_tool"], "get_status")
+
+    def test_blocks_tool_for_different_server_namespace(self):
+        provider = RealMCPProvider(
+            MCPServerConfig(
+                name="tiny",
+                command=sys.executable,
+                args=[str(self.server_path)],
+                enabled=True,
+                allowed_tools=["echo"],
+            )
+        )
+
+        result = provider.call_tool(
+            "mcp_other_echo",
+            {"message": "hello"},
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["metadata"]["error_type"], "MCPToolNotAllowed")
+        self.assertTrue(result["metadata"]["mcp_guardrail_blocked"])
+        self.assertEqual(result["metadata"]["provider"], "mcp:tiny")
+        self.assertEqual(result["metadata"]["server"], "tiny")
+        self.assertEqual(result["metadata"]["exposed_tool"], "mcp_other_echo")
+        self.assertEqual(result["metadata"]["original_tool"], "mcp_other_echo")
+
+    def test_allows_namespaced_allowed_tool_before_discovery(self):
+        provider = RealMCPProvider(
+            MCPServerConfig(
+                name="tiny",
+                command=sys.executable,
+                args=[str(self.server_path)],
+                enabled=True,
+                allowed_tools=["echo"],
+            )
+        )
+
+        result = provider.call_tool(
+            "mcp_tiny_echo",
+            {"message": "hello"},
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertIn("Echo: hello", result["data"]["text"])
+        self.assertEqual(result["metadata"]["provider"], "mcp:tiny")
+        self.assertEqual(result["metadata"]["server"], "tiny")
+        self.assertEqual(result["metadata"]["exposed_tool"], "mcp_tiny_echo")
+        self.assertEqual(result["metadata"]["original_tool"], "echo")
+
+    def test_registered_allowed_tool_still_executes(self):
+        provider = RealMCPProvider(
+            MCPServerConfig(
+                name="tiny",
+                command=sys.executable,
+                args=[str(self.server_path)],
+                enabled=True,
+                allowed_tools=["echo"],
+            )
+        )
+
+        provider.list_tool_specs()
+
+        result = provider.call_tool(
+            "mcp_tiny_echo",
+            {"message": "hello"},
+        )
+
+        self.assertTrue(result["ok"])
+        self.assertIn("Echo: hello", result["data"]["text"])
+        self.assertEqual(result["metadata"]["provider"], "mcp:tiny")
+        self.assertEqual(result["metadata"]["server"], "tiny")
+        self.assertEqual(result["metadata"]["exposed_tool"], "mcp_tiny_echo")
+        self.assertEqual(result["metadata"]["original_tool"], "echo")
 
 
 if __name__ == "__main__":
