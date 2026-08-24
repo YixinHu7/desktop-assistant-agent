@@ -6,7 +6,7 @@ from app.mcp.server_config import MCPServerConfig
 
 
 class SlowCallProvider(RealMCPProvider):
-    async def _call_tool_async(self, tool_name, arguments):
+    async def _call_tool_async(self, tool_name, arguments, original_name=None):
         await asyncio.sleep(2.0)
         return {
             "ok": True,
