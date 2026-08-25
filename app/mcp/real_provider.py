@@ -22,13 +22,18 @@ class RealMCPProvider(MCPProvider):
             server_name=self.server_config.name,
             allowed_tools=list(self.server_config.allowed_tools),
         )
-    
+
     def discovery_diagnostics(self) -> dict:
         return self.last_discovery_diagnostics.to_dict()
 
     def list_tool_specs(self) -> list[MCPToolSpec]:
         try:
-            return asyncio.run(self._list_tool_specs_async())
+            return asyncio.run(
+                asyncio.wait_for(
+                    self._list_tool_specs_async(),
+                    timeout=self.server_config.list_timeout_seconds,
+                )
+            )
         except Exception as exc:
             self.last_discovery_diagnostics = MCPDiscoveryDiagnostics(
                 provider_name=self.provider_name,
@@ -36,20 +41,40 @@ class RealMCPProvider(MCPProvider):
                 status="error",
                 allowed_tools=list(self.server_config.allowed_tools),
                 error_type=type(exc).__name__,
-                error_message=str(exc),
+                error_message=str(exc) or "MCP tool listing timed out or failed.",
             )
             return []
 
     def call_tool(self, tool_name: str, arguments: dict[str, Any]):
+        original_name, block_reason = self._resolve_allowed_tool_name(tool_name)
+
+        if block_reason is not None:
+            return self._blocked_tool_error(
+                tool_name=tool_name,
+                original_name=original_name,
+                message=block_reason,
+            )
+
         try:
-            return asyncio.run(self._call_tool_async(tool_name, arguments))
+            return asyncio.run(
+                asyncio.wait_for(
+                    self._call_tool_async(
+                        tool_name=tool_name,
+                        arguments=arguments,
+                        original_name=original_name,
+                    ),
+                    timeout=self.server_config.call_timeout_seconds,
+                )
+            )
         except Exception as exc:
-            original_name = self._tool_name_map.get(tool_name) or (
-                self._original_name_from_exposed_name(tool_name)
+            original_name = (
+                original_name
+                or self._tool_name_map.get(tool_name)
+                or (self._original_name_from_exposed_name(tool_name))
             )
 
             return tool_error(
-                message=str(exc),
+                message=str(exc) or "MCP tool execution timed out or failed.",
                 metadata={
                     "tool": tool_name,
                     "exposed_tool": tool_name,
@@ -64,9 +89,9 @@ class RealMCPProvider(MCPProvider):
     async def _list_tool_specs_async(self) -> list[MCPToolSpec]:
         async with self._open_session() as session:
             tools_response = await session.list_tools()
-        
+
         self._tool_name_map.clear()
-        
+
         raw_tools = list(tools_response.tools)
         discovered_tools = [str(tool.name) for tool in raw_tools]
         filtered_tools = []
@@ -74,11 +99,11 @@ class RealMCPProvider(MCPProvider):
 
         for tool in tools_response.tools:
             original_name = str(tool.name)
-            
+
             if not self._is_tool_allowed(original_name):
                 filtered_tools.append(original_name)
                 continue
-            
+
             exposed_name = self._exposed_tool_name(original_name)
             self._tool_name_map[exposed_name] = original_name
             tool_policy = self._tool_policy_for(original_name)
@@ -95,7 +120,8 @@ class RealMCPProvider(MCPProvider):
                     original_name=original_name,
                     provider_name=self.provider_name,
                     description=self._build_tool_description(tool, original_name),
-                    parameters=input_schema or {
+                    parameters=input_schema
+                    or {
                         "type": "object",
                         "properties": {},
                         "required": [],
@@ -115,7 +141,7 @@ class RealMCPProvider(MCPProvider):
                     ),
                 )
             )
-            
+
         self.last_discovery_diagnostics = MCPDiscoveryDiagnostics(
             provider_name=self.provider_name,
             server_name=self.server_config.name,
@@ -129,8 +155,72 @@ class RealMCPProvider(MCPProvider):
 
         return specs
 
-    async def _call_tool_async(self, tool_name: str, arguments: dict[str, Any]):
-        original_name = self._tool_name_map.get(tool_name)
+    def _resolve_allowed_tool_name(
+        self, tool_name: str
+    ) -> tuple[str | None, str | None]:
+        mapped_name = self._tool_name_map.get(tool_name)
+
+        if mapped_name is not None:
+            if self._is_tool_allowed(mapped_name):
+                return mapped_name, None
+
+            return mapped_name, (
+                f"MCP tool '{mapped_name}' is not allowed by server allowlist."
+            )
+
+        prefix = f"mcp_{_sanitize_identifier(self.server_config.name)}_"
+
+        if not tool_name.startswith(prefix):
+            return None, (
+                "MCP tool must be called by its registered exposed name for this "
+                f"server: expected prefix '{prefix}'."
+            )
+
+        original_name = self._original_name_from_exposed_name(tool_name)
+
+        if not original_name:
+            return None, "MCP tool name did not resolve to an original tool name."
+
+        if self._exposed_tool_name(original_name) != tool_name:
+            return original_name, (
+                "MCP tool name is malformed and does not match the expected exposed "
+                "tool naming scheme."
+            )
+
+        if not self._is_tool_allowed(original_name):
+            return original_name, (
+                f"MCP tool '{original_name}' is not allowed by server allowlist."
+            )
+
+        return original_name, None
+
+    def _blocked_tool_error(
+        self,
+        tool_name: str,
+        original_name: str | None,
+        message: str,
+    ):
+        return tool_error(
+            message=message,
+            metadata={
+                "tool": tool_name,
+                "exposed_tool": tool_name,
+                "original_tool": original_name or tool_name,
+                "provider": self.provider_name,
+                "server": self.server_config.name,
+                "real_mcp_error": True,
+                "mcp_guardrail_blocked": True,
+                "error_type": "MCPToolNotAllowed",
+            },
+        )
+
+    async def _call_tool_async(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        original_name: str | None = None,
+    ):
+        original_name = original_name or self._tool_name_map.get(tool_name)
 
         if original_name is None:
             original_name = self._original_name_from_exposed_name(tool_name)
@@ -214,11 +304,12 @@ class RealMCPProvider(MCPProvider):
         return " ".join(parts)
 
     def _normalize_tool_result(self, result) -> dict[str, Any]:
-        is_error = bool(getattr(result, "isError", False) or getattr(result, "is_error", False))
+        is_error = bool(
+            getattr(result, "isError", False) or getattr(result, "is_error", False)
+        )
         content = getattr(result, "content", None) or []
-        structured_content = (
-            getattr(result, "structuredContent", None)
-            or getattr(result, "structured_content", None)
+        structured_content = getattr(result, "structuredContent", None) or getattr(
+            result, "structured_content", None
         )
 
         text_parts = []
@@ -238,7 +329,7 @@ class RealMCPProvider(MCPProvider):
             "content": [_object_to_data(item) for item in content],
             "raw": _object_to_data(result),
         }
-    
+
     def _is_tool_allowed(self, original_name: str) -> bool:
         return original_name in set(self.server_config.allowed_tools)
 

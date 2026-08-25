@@ -251,7 +251,12 @@ def build_tool_definitions(memory_store):
         )
     
     for provider in build_mcp_providers():
-        for spec in provider.list_tool_specs():
+        try:
+            specs = provider.list_tool_specs()
+        except Exception:
+            continue
+
+        for spec in specs:
             permission = permissions.get(
                 spec.name,
                 {
@@ -278,7 +283,7 @@ def build_tool_definitions(memory_store):
                 permission_reason=permission["reason"],
                 source=provider.provider_name,
             )
-        
+       
     return tools
     
 def get_tool_schemas(tool_definitions):

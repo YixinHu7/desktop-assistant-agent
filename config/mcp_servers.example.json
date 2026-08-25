@@ -7,6 +7,8 @@
       "env": {},
       "enabled": false,
       "allowed_tools": ["echo", "get_status"],
+      "list_timeout_seconds": 5.0,
+      "call_timeout_seconds": 10.0,
       "tool_policies": {
         "echo": {
           "requires_approval": false,

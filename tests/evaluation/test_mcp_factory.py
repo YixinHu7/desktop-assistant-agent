@@ -81,6 +81,8 @@ class MCPFactoryTests(unittest.TestCase):
         self.assertEqual(providers[0].server_config.allowed_tools, ["echo"])
         self.assertFalse(providers[0].server_config.tool_policies["echo"].requires_approval)
         self.assertEqual(providers[0].server_config.tool_policies["echo"].risk_level, "low")
+        self.assertEqual(providers[0].server_config.list_timeout_seconds, 5.0)
+        self.assertEqual(providers[0].server_config.call_timeout_seconds, 10.0)
 
     def test_load_mcp_server_configs_accepts_missing_file(self):
         configs = load_mcp_server_configs("definitely_missing_mcp_config.json")
