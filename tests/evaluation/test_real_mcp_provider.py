@@ -37,6 +37,12 @@ class RealMCPProviderTests(unittest.TestCase):
 
         self.assertIn("mcp_tiny_echo", names)
         self.assertIn("mcp_tiny_get_status", names)
+        
+        for spec in specs:
+            self.assertEqual(spec.parameters["type"], "object")
+            self.assertIn("properties", spec.parameters)
+            self.assertIn("required", spec.parameters)
+            self.assertFalse(spec.parameters["additionalProperties"])
 
     def test_calls_tool_from_stdio_server(self):
         provider = RealMCPProvider(

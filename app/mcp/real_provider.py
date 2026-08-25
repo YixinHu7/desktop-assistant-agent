@@ -10,6 +10,7 @@ from app.mcp.provider import MCPProvider, MCPToolSpec
 from app.mcp.server_config import MCPServerConfig
 from app.tools.results import tool_error, tool_success
 from app.mcp.diagnostics import MCPDiscoveryDiagnostics
+from app.mcp.schema import normalize_mcp_tool_parameters
 
 
 class RealMCPProvider(MCPProvider):
@@ -120,13 +121,7 @@ class RealMCPProvider(MCPProvider):
                     original_name=original_name,
                     provider_name=self.provider_name,
                     description=self._build_tool_description(tool, original_name),
-                    parameters=input_schema
-                    or {
-                        "type": "object",
-                        "properties": {},
-                        "required": [],
-                        "additionalProperties": False,
-                    },
+                    parameters=normalize_mcp_tool_parameters(input_schema),
                     requires_approval=(
                         tool_policy.requires_approval if tool_policy else True
                     ),
