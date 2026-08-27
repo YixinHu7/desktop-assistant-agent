@@ -31,6 +31,7 @@ The goal is to understand how agent runtimes work beyond a basic chatbot interfa
 - **Replanning**: decides whether a revised plan is useful after partial failure
 - **Run Summary**: logs a unified summary of each agent run
 - **Runtime Metrics**: computes tool success rate, recovery rate, replanning rate, and possible failure signals
+- **MCP Integration**: supports mock and real MCP tool providers with allowlists, namespacing, approval metadata, timeouts, telemetry, schema normalization, and eval coverage
 
 ## Tech Stack
 
@@ -57,13 +58,19 @@ The goal is to understand how agent runtimes work beyond a basic chatbot interfa
     │   ├── recovery.py           # Deterministic tool failure recovery
     │   ├── run_context.py        # Unified per-run summary object
     │   ├── metrics.py            # Runtime metrics calculation
+    │   ├── mcp/                  # MCP providers, config, diagnostics, telemetry
     │   └── tools/
     │       ├── base.py           # ToolDefinition model
     │       ├── registry.py       # Tool schemas + function bindings
     │       ├── results.py        # Normalized tool result schema
     │       └── system_tools.py   # Local tools
     ├── scripts/
-    │   └── report_metrics.py     # CLI metrics report
+    │   ├── report_metrics.py     # CLI metrics report
+    │   └── mcp_discover.py       # MCP provider discovery helper
+    ├── docs/
+    │   └── mcp.md                # MCP setup, safety model, and debugging guide
+    ├── config/
+    │   └── mcp_servers.example.json    
     ├── data/
     │   ├── memory.json           # Local persistent memory
     │   ├── traces.jsonl          # Runtime traces
@@ -208,6 +215,17 @@ Run the agent:
 
     make run
 
+Run MCP evals:
+
+    make eval-mcp
+
+Inspect configured MCP providers:
+
+    ENABLE_MCP_TOOLS=true \
+    ENABLE_REAL_MCP_TOOLS=true \
+    ENABLE_MOCK_MCP_TOOLS=false \
+    PYTHONPATH=. python scripts/mcp_discover.py
+
 Generate a runtime metrics report:
 
     make metrics
@@ -290,6 +308,24 @@ The report summarizes:
 | `save_memory_fact` | Save durable user memory |
 | `open_app` | Open a desktop application |
 
+## MCP Integration
+
+This project supports MCP tools through the same registry and executor path as local tools.
+
+MCP support includes:
+
+- mock MCP tools for deterministic evals
+- real stdio MCP server providers
+- explicit `allowed_tools` allowlists
+- namespaced tool names such as `mcp_tiny_echo`
+- approval and risk metadata through `tool_policies`
+- discovery and execution timeouts
+- runtime guardrails for unregistered tools
+- schema normalization for MCP tool parameters
+- telemetry for eval scoring and debugging
+
+See [MCP Developer Guide](docs/mcp.md) for setup, configuration, safety model, and troubleshooting.
+
 ## Roadmap
 
 ### Runtime Improvements
@@ -316,13 +352,27 @@ Skills will package reusable task instructions, resources, and scripts for speci
 
 ### MCP Integration
 
-Planned future addition:
+Implemented:
 
-- MCP-ready tool adapter layer
-- support for external MCP tool sources
-- unified execution path for local and MCP tools
+- MCP provider interface
+- mock MCP provider for evals
+- real stdio MCP provider
+- config-based server loading
+- allowlisted tool registration
+- namespaced MCP tool names
+- approval and risk metadata
+- discovery diagnostics
+- timeout boundaries
+- runtime allowlist guardrails
+- tool schema normalization
+- MCP execution telemetry
+- MCP eval coverage
 
-The current `ToolDefinition` design is intended to make future MCP integration easier.
+Next possible improvements:
+
+- interactive approval UI for high-risk MCP tools
+- support for additional MCP transports
+- richer MCP discovery reports
 
 ## Project Status
 
