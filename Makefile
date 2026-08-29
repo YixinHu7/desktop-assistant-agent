@@ -105,14 +105,16 @@ check:
 		scripts/run_evals.py \
 		scripts/eval_worker.py \
 		scripts/analyze_eval_failures.py \
-		app/tools/mock_mcp_tools.py
+		app/tools/mock_mcp_tools.py \
 		app/mcp/provider.py \
 		app/mcp/mock_provider.py \
 		app/mcp/real_provider.py \
 		app/mcp/server_config.py \
 		app/mcp/factory.py \
 		app/mcp/diagnostics.py \
-		scripts/mcp_discover.py \
+		app/mcp/telemetry.py \
+		app/mcp/schema.py \
+		scripts/mcp_discover.py
 	$(PYTHON) scripts/validate_evals.py
 	$(PYTHON) -m unittest discover -s tests/evaluation -v
 
