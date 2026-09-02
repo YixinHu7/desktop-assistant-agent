@@ -10,6 +10,7 @@ help:
 	@echo "  make eval-validate         Validate eval case JSONL files"
 	@echo "  make eval-case CASE=id     Run one eval case"
 	@echo "  make eval-case-report CASE=id"
+	@echo "  make eval-repeat CASE=id COUNT=5"
 	@echo "  make eval-routing          Run routing eval suite"
 	@echo "  make eval-skills           Run skills eval suite"
 	@echo "  make eval-tools            Run tools eval suite"
@@ -57,6 +58,11 @@ eval-case:
 eval-case-report:
 	@test -n "$(CASE)" || (echo "Usage: make eval-case-report CASE=case_id" && exit 1)
 	$(PYTHON) scripts/run_evals.py --case-id $(CASE) --print-failure-report
+
+.PHONY: eval-repeat
+eval-repeat:
+	@test -n "$(CASE)" || (echo "Usage: make eval-repeat CASE=case_id COUNT=5" && exit 1)
+	$(PYTHON) scripts/run_eval_repeated.py --case-id $(CASE) --count $(or $(COUNT),5)
 
 .PHONY: eval-routing
 eval-routing:

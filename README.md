@@ -215,9 +215,23 @@ Run the agent:
 
     make run
 
+Run all evals:
+
+    make eval-all
+
 Run MCP evals:
 
     make eval-mcp
+
+Run one eval case:
+
+    make eval-case-report CASE=skill_repo_review_001
+
+Repeat a suspected flaky eval case:
+
+    make eval-repeat CASE=skill_repo_review_001 COUNT=5
+
+See [Eval Developer Guide](docs/evals.md) for eval case format, debugging workflow, failure reports, and flake detection.
 
 Inspect configured MCP providers:
 

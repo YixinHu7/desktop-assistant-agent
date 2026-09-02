@@ -100,14 +100,20 @@ def _format_check_details(details: dict[str, Any]) -> str:
         "expected",
         "actual",
         "required_tools",
+        "forbidden_tools",
         "missing_required_tools",
         "used_forbidden_tools",
         "actual_tools",
         "missing_required",
         "present_excluded",
+        "matched_any",
+        "matched_expectations",
+        "total_expectations",
         "unsupported_files",
         "observed_files",
         "answer_files",
+        "answer_length",
+        "minimum_characters",
         "reason",
     ]
 
@@ -122,6 +128,137 @@ def _format_check_details(details: dict[str, Any]) -> str:
 
     formatted = json.dumps(selected, indent=2, ensure_ascii=False)
     return f"\n```json\n{formatted}\n```\n"
+
+
+def _truncate_text(text: str, max_chars: int = 1200) -> str:
+    normalized = text.strip()
+
+    if len(normalized) <= max_chars:
+        return normalized
+
+    return normalized[:max_chars].rstrip() + "\n\n...[truncated]"
+
+
+def _format_final_answer_excerpt(final_answer: str) -> str:
+    if not final_answer.strip():
+        return ""
+
+    return "\n".join(
+        [
+            "**Final answer excerpt:**",
+            "",
+            "```text",
+            _truncate_text(final_answer),
+            "```",
+            "",
+        ]
+    )
+
+
+def _format_run_summary_tool_calls(run_summary: dict[str, Any]) -> str:
+    tool_calls = run_summary.get("tool_calls")
+
+    if not isinstance(tool_calls, list) or not tool_calls:
+        return ""
+
+    compact_calls = []
+
+    for item in tool_calls[:10]:
+        if not isinstance(item, dict):
+            continue
+
+        result = item.get("result")
+        result = result if isinstance(result, dict) else {}
+
+        compact_calls.append(
+            {
+                "tool": item.get("tool") or item.get("tool_name"),
+                "kind": item.get("kind"),
+                "status": item.get("status"),
+                "ok": item.get("ok"),
+                "source": item.get("source"),
+                "arguments": item.get("arguments"),
+                "error": result.get("error"),
+                "mcp": item.get("mcp"),
+            }
+        )
+
+    if not compact_calls:
+        return ""
+
+    if len(tool_calls) > 10:
+        compact_calls.append(
+            {
+                "truncated": True,
+                "remaining_tool_calls": len(tool_calls) - 10,
+            }
+        )
+
+    return "\n".join(
+        [
+            "**Tool call summary:**",
+            "",
+            "```json",
+            json.dumps(compact_calls, indent=2, ensure_ascii=False),
+            "```",
+            "",
+        ]
+    )
+
+
+def _format_list_signal(value: Any) -> str:
+    if not value:
+        return "- None"
+
+    if isinstance(value, list):
+        return "\n".join(f"- {item}" for item in value)
+
+    return f"- {value}"
+
+
+def _format_completion_signals(details: dict[str, Any]) -> str:
+    signals = details.get("signals")
+
+    if not isinstance(signals, dict):
+        return ""
+
+    lines = [
+        "**Completion signals:**",
+        "",
+        f"- Expected status: `{details.get('expected')}`",
+        f"- Observed status: `{details.get('actual')}`",
+        f"- Reason: {details.get('reason')}",
+        f"- Route: `{signals.get('route')}`",
+        f"- Tool policy should use tools: `{signals.get('tool_policy_should_use_tools')}`",
+        f"- Has final answer: `{signals.get('has_final_answer')}`",
+        f"- Successful tool calls: {signals.get('successful_tool_calls')}",
+        f"- Failed tool calls: {signals.get('failed_tool_calls')}",
+        f"- Denied tool calls: {signals.get('denied_tool_calls')}",
+        f"- Denied approvals: {signals.get('denied_approvals')}",
+        "",
+        "Actual tools:",
+        "",
+        _format_list_signal(signals.get("actual_tools")),
+        "",
+        "Missing required tools:",
+        "",
+        _format_list_signal(signals.get("missing_required_tools")),
+        "",
+        "Forbidden tools used:",
+        "",
+        _format_list_signal(signals.get("used_forbidden_tools")),
+        "",
+        "Policy error tools:",
+        "",
+        _format_list_signal(signals.get("policy_error_tools")),
+        "",
+        "Remaining steps:",
+        "",
+        _format_list_signal(signals.get("remaining_steps")),
+        "",
+    ]
+
+    return "\n".join(lines)
 
 
 def _case_failure_reason(result) -> str:
@@ -204,6 +341,16 @@ def render_failure_report(report: EvalRunReport, source_path: Optional[str] = No
             ]
         )
 
+        final_answer_excerpt = _format_final_answer_excerpt(result.final_answer)
+
+        if final_answer_excerpt:
+            lines.append(final_answer_excerpt)
+
+        tool_call_summary = _format_run_summary_tool_calls(result.run_summary)
+
+        if tool_call_summary:
+            lines.append(tool_call_summary)
+
         if result.error is not None:
             lines.extend(
                 [
@@ -244,6 +391,13 @@ def render_failure_report(report: EvalRunReport, source_path: Optional[str] = No
                     f"- Message: {check.message}",
                 ]
             )
+
+            if check.name == "task_completion":
+                completion_signals = _format_completion_signals(check.details)
+
+                if completion_signals:
+                    lines.append("")
+                    lines.append(completion_signals)
 
             detail_text = _format_check_details(check.details)
 
