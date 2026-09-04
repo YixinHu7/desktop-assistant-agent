@@ -233,6 +233,16 @@ Repeat a suspected flaky eval case:
 
 See [Eval Developer Guide](docs/evals.md) for eval case format, debugging workflow, failure reports, and flake detection.
 
+Inspect the latest agent run:
+
+    make inspect-latest-run
+
+Inspect a specific run:
+
+    make inspect-run RUN_ID=<run_id>
+
+See [Run Summary Inspector](docs/run-summary-inspector.md) for trace inspection, run debugging, and demo workflow.
+
 Inspect configured MCP providers:
 
     ENABLE_MCP_TOOLS=true \
