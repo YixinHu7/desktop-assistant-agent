@@ -4,7 +4,10 @@ PYTHON ?= python
 help:
 	@echo "Available commands:"
 	@echo "  make run                   Run the desktop assistant"
+	@echo "  make demo-repo-review      Run repo review demo workflow"
 	@echo "  make metrics               Print runtime metrics"
+	@echo "  make inspect-latest-run    Inspect latest run summary"
+	@echo "  make inspect-run RUN_ID=id Inspect one run summary"
 	@echo "  make test                  Run all unit tests"
 	@echo "  make test-evaluation       Run evaluation unit tests"
 	@echo "  make eval-validate         Validate eval case JSONL files"
@@ -33,9 +36,22 @@ help:
 run:
 	$(PYTHON) main.py
 
+.PHONY: demo-repo-review
+demo-repo-review:
+	$(PYTHON) scripts/run_demo_workflow.py
+
 .PHONY: metrics
 metrics:
 	$(PYTHON) scripts/report_metrics.py
+
+.PHONY: inspect-latest-run
+inspect-latest-run:
+	$(PYTHON) scripts/inspect_run.py --latest
+
+.PHONY: inspect-run
+inspect-run:
+	@test -n "$(RUN_ID)" || (echo "Usage: make inspect-run RUN_ID=run_id" && exit 1)
+	$(PYTHON) scripts/inspect_run.py --run-id $(RUN_ID)
 
 .PHONY: test
 test:
@@ -111,6 +127,8 @@ check:
 		scripts/run_evals.py \
 		scripts/eval_worker.py \
 		scripts/analyze_eval_failures.py \
+		scripts/inspect_run.py \
+		scripts/run_demo_workflow.py \
 		app/tools/mock_mcp_tools.py \
 		app/mcp/provider.py \
 		app/mcp/mock_provider.py \

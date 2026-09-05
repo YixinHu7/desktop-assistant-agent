@@ -343,6 +343,18 @@ When a case fails, debug in this order:
 
 This order avoids chasing downstream failures caused by earlier runtime decisions.
 
+## Inspecting Runtime Traces
+
+After running an eval case, inspect the latest agent run summary:
+
+```bash
+PYTHONPATH=. make inspect-latest-run
+```
+
+This is useful when a failure report shows a failed check but you want to inspect the full route, skill, plan, tool calls, review, replan decision, and final answer.
+
+See [Run Summary Inspector](run-summary-inspector.md).
+
 ## Stabilizing Flaky Evals
 
 A case is likely flaky if:
