@@ -4,6 +4,7 @@ PYTHON ?= python
 help:
 	@echo "Available commands:"
 	@echo "  make run                   Run the desktop assistant"
+	@echo "  make demo-repo-review      Run repo review demo workflow"
 	@echo "  make metrics               Print runtime metrics"
 	@echo "  make inspect-latest-run    Inspect latest run summary"
 	@echo "  make inspect-run RUN_ID=id Inspect one run summary"
@@ -34,6 +35,10 @@ help:
 .PHONY: run
 run:
 	$(PYTHON) main.py
+
+.PHONY: demo-repo-review
+demo-repo-review:
+	$(PYTHON) scripts/run_demo_workflow.py
 
 .PHONY: metrics
 metrics:
@@ -123,6 +128,7 @@ check:
 		scripts/eval_worker.py \
 		scripts/analyze_eval_failures.py \
 		scripts/inspect_run.py \
+		scripts/run_demo_workflow.py \
 		app/tools/mock_mcp_tools.py \
 		app/mcp/provider.py \
 		app/mcp/mock_provider.py \
