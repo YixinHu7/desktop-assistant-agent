@@ -115,6 +115,8 @@ eval-latest-report:
 .PHONY: check
 check:
 	$(PYTHON) -m py_compile \
+		app/memory.py \
+		app/memory_policy.py \
 		app/evaluation/models.py \
 		app/evaluation/results.py \
 		app/evaluation/snapshot.py \

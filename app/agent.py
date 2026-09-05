@@ -523,17 +523,26 @@ class DesktopAssistantAgent:
         run.memory_decision = memory_decision.model_dump()
         log_event("memory_decision", memory_decision.model_dump())
         
-        if memory_decision.action == "write" and memory_decision.key and memory_decision.value:
-            self.memory.data["facts"][memory_decision.key] = memory_decision.value
-            self.memory.save()
+        if (
+            memory_decision.action == "write"
+            and memory_decision.key
+            and memory_decision.value
+        ):
+            self.memory.set_fact(
+                memory_decision.key,
+                memory_decision.value,
+            )
 
-            log_event("memory_write", {
-                "key": memory_decision.key,
-                "value": memory_decision.value,
-                "reason": memory_decision.reason,
-                "source": "memory_policy"
-            })
-            # Update memory context
+            log_event(
+                "memory_write",
+                {
+                    "key": memory_decision.key,
+                    "value": memory_decision.value,
+                    "reason": memory_decision.reason,
+                    "source": "memory_policy",
+                },
+            )
+
             memory_context = self.memory.get_context_text()
         
         # Get route decision
