@@ -422,6 +422,20 @@ PYTHONPATH=. make eval-repeat CASE=skill_repo_review_001 COUNT=5
 
 See [Eval Developer Guide](docs/evals.md) for eval case format, debugging workflow, failure reports, and flake detection.
 
+
+### Evaluation Results
+
+- Deterministic evaluation: 23/23 cases passed
+- Scoring framework: 10 deterministic dimensions
+- Optional LLM-as-a-Judge: integrated and validated
+- Sample LLM Judge result: 0.95/1.00 on one case
+
+The evaluation pipeline supports deterministic checks
+for agent behavior and optional rubric-based LLM judging
+for semantic correctness, completeness, instruction
+following, groundedness, and overall answer quality.
+
+
 ## Runtime Metrics
 
 The runtime logs each run into:
